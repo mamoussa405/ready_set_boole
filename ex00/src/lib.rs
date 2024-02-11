@@ -1,13 +1,19 @@
+/// add two integers a and b using bitwise operators
+/// and return the result as u32
 pub fn adder(a: u32, b: u32) -> u32 {
     let mut res: u32 = 0;
     let mut carry: bool = false;
 
     for i in 0..32 {
+        /*
+            if this true means a and b have different bits at 
+            index i, otherwise they have the same bits, either
+            0 and 0 or 1 and 1
+        */
         if (a & (1 << i)) != (b & (1 << i)) {
             if !carry {
                 res |= 1 << i;
             }
-            carry = false;
         }
         else {
             if carry {
@@ -35,6 +41,8 @@ mod tests {
         assert_eq!(9 + 31, adder(9, 31));
         assert_eq!(11 + 21, adder(11, 21));
         assert_eq!(15 + 101, adder(15, 101));
+        assert_eq!(123456789 + 987654321, adder(123456789, 987654321));
+        assert_eq!(1000001 + 2000001, adder(1000001, 2000001));
     }
 
     #[test]
@@ -42,6 +50,8 @@ mod tests {
         assert_eq!(8 + 30, adder(8, 30));
         assert_eq!(12 + 22, adder(12, 22));
         assert_eq!(16 + 102, adder(16, 102));
+        assert_eq!(100 + 10000, adder(100, 10000));
+        assert_eq!(200 + 12000, adder(200, 12000));
     }
 
     #[test]
