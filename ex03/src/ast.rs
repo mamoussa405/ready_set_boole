@@ -8,8 +8,8 @@ enum Symbols {
     And,
     Or,
     Xor,
-    MaterialCondition,
-    LogicalEquivalence,
+    MatCond,
+    LogEq,
 }
 
 #[derive(Debug)]
@@ -43,17 +43,24 @@ impl AST {
 
     pub fn build(&mut self, formula: &str) {
         let mut stack: Vec<char> = Vec::new();
+        let mut insert_right: bool = false;
 
         for c in formula.as_bytes() {
             match c {
                 b'1' | b'0' => stack.push(*c as char),
-                b'|' => self.add_sub_tree(&mut stack, Symbols::Or),
-                b'&' => self.add_sub_tree(&mut stack, Symbols::And),
-                b'!' => self.add_sub_tree(&mut stack, Symbols::Not),
-                b'^' => self.add_sub_tree(&mut stack, Symbols::Xor),
-                b'>' => self.add_sub_tree(&mut stack, Symbols::MaterialCondition),
-                b'=' => self.add_sub_tree(&mut stack, Symbols::LogicalEquivalence),
+                b'|' => self.add_sub_tree(&mut stack, Symbols::Or, insert_right),
+                b'&' => self.add_sub_tree(&mut stack, Symbols::And, insert_right),
+                b'!' => self.add_sub_tree(&mut stack, Symbols::Not, insert_right),
+                b'^' => self.add_sub_tree(&mut stack, Symbols::Xor, insert_right),
+                b'>' => self.add_sub_tree(&mut stack, Symbols::MatCond, insert_right),
+                b'=' => self.add_sub_tree(&mut stack, Symbols::LogEq, insert_right),
                 _ => panic!("Invalid formula"),
+            }
+
+            match c {
+                b'1' | b'0' => insert_right = false,
+                b'|' | b'&' | b'!' | b'^' | b'>' | b'=' => insert_right = true,
+                _ => {}
             }
         }
 
@@ -62,7 +69,7 @@ impl AST {
         }
     }
 
-    fn add_sub_tree(&mut self, stack: &mut Vec<char>, symbol: Symbols) {
+    fn add_sub_tree(&mut self, stack: &mut Vec<char>, symbol: Symbols, insert_right: bool) {
         let sub_root: Rc<RefCell<Option<Box<Node>>>> =
             Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
 
@@ -90,21 +97,20 @@ impl AST {
                 panic!("Invalid formula");
             });
 
-
-            if stack.is_empty() {
-                sub_root.borrow_mut().as_mut().unwrap().right = if top == '1' {
-                    Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::True)))))
-                } else {
-                    Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::False)))))
-                };
-                sub_root.borrow_mut().as_mut().unwrap().left = Rc::clone(&self.root);
-            } else {
+            if insert_right {
                 sub_root.borrow_mut().as_mut().unwrap().left = if top == '1' {
                     Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::True)))))
                 } else {
                     Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::False)))))
                 };
                 sub_root.borrow_mut().as_mut().unwrap().right = Rc::clone(&self.root);
+            } else {
+                sub_root.borrow_mut().as_mut().unwrap().right = if top == '1' {
+                    Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::True)))))
+                } else {
+                    Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::False)))))
+                };
+                sub_root.borrow_mut().as_mut().unwrap().left = Rc::clone(&self.root);
             }
             self.root = Rc::clone(&sub_root);
         }
@@ -128,14 +134,14 @@ impl AST {
                 self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
                     ^ self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
             }
-            Symbols::MaterialCondition => {
-                !(self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref()) &&
-                    !self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref()))
-            },
-            Symbols::LogicalEquivalence => {
+            Symbols::MatCond => {
+                !(self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
+                    && !self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref()))
+            }
+            Symbols::LogEq => {
                 self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
                     == self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
-            },
+            }
             Symbols::True => true,
             Symbols::False => false,
             _ => false,
