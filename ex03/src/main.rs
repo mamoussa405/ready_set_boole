@@ -1,5 +1,5 @@
 use ex03;
 
 fn main() {
-    ex03::eval_formula("110|>");
+    ex03::eval_formula("10|!");
 }

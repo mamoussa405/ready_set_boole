@@ -9,11 +9,9 @@ pub fn eval_formula(formula: &str) -> bool {
     // true
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn subject_tests() {
@@ -91,5 +89,26 @@ mod tests {
         assert!(!eval_formula("1111===11==11=1=0=="));
         assert!(eval_formula("0000===00==00=0=0=="));
         assert!(!eval_formula("1111===10==11=1=1=="));
+    }
+
+    #[test]
+    fn logical_not_tests() {
+        assert!(!eval_formula("1!"));
+        assert!(!eval_formula("1!!!!!!!!!!!!!"));
+        assert!(eval_formula("0!"));
+        assert!(eval_formula("0!!!!!!!!!!!!!!!"));
+        assert!(!eval_formula("0!!"));
+        assert!(!eval_formula("1!0|"));
+        assert!(eval_formula("1!0!!!|1="));
+    }
+
+    #[test]
+    fn all_operators_tests() {
+        assert!(!eval_formula("1111&=>11=|11=1!0=>^"));
+        assert!(!eval_formula("1111&=>11=|11=10!=>^"));
+        assert!(!eval_formula("1111&=>11=|11=10=!>^"));
+        assert!(!eval_formula("11^!11&=0>11=|11=10=!>^"));
+        assert!(!eval_formula("1!1^11&=1>11=|11=10=!>^"));
+        assert!(eval_formula("11!1^1&=!11=|11=10=!>^!"));
     }
 }
