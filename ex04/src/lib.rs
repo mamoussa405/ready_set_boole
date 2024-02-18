@@ -14,6 +14,10 @@ fn build_print_truth_table(formula: &str) -> Vec<Vec<char>> {
             unique_chars.insert(*c as char);
         }
     }
+    if unique_chars.is_empty() {
+        panic!("Invalid formula");
+    }
+
     let width: usize = "| x |".len() + (" x |".len() * unique_chars.len());
     let height: usize = (1 << unique_chars.len()) + 2;
     let mut truth_table: TruthTable = TruthTable::new(width, height);
@@ -267,9 +271,80 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Invalid formula")]
-    fn invalid_formula_tests() {
+    fn invalid_formula_empty_string_test() {
         build_print_truth_table("");
-        build_print_truth_table("AAA!");
-        build_print_truth_table("aY=!X>K^");
     }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_just_spaces_test() {
+        build_print_truth_table("      ");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test1() {
+        build_print_truth_table("AAA!");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test2() {
+        build_print_truth_table("A");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test3() {
+        build_print_truth_table("AB");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test4() {
+        build_print_truth_table("AAC|");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test5() {
+        build_print_truth_table("ABCD&=>AB=|CE=F!G=>^^");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_values_test1() {
+        build_print_truth_table("!");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_values_test2() {
+        build_print_truth_table("!!!!!");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_unknown_symbol_test1() {
+        build_print_truth_table("aY=!)>K^");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_unknown_symbol_test2() {
+        build_print_truth_table("&&!!Abcd");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_unknown_symbol_test3() {
+        build_print_truth_table("1111&=>11=|11=1!0=>^");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_unknown_symbol_test4() {
+        build_print_truth_table("111|");
+    }
+
 }
