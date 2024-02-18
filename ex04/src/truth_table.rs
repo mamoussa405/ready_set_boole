@@ -46,7 +46,7 @@ impl TruthTable {
         }
     }
 
-    pub fn fill(&mut self, unique_chars: BTreeSet<char>) -> &Vec<Vec<char>> {
+    pub fn fill(&mut self, unique_chars: BTreeSet<char>) {
         let mut tmp: usize = self.zeros_to_fill;
 
         self.fill_table_header(unique_chars);
@@ -71,11 +71,9 @@ impl TruthTable {
                 }
             }
         }
-
-        &self.truth_table
     }
 
-    pub fn eval(&mut self, formula: &str) {
+    pub fn eval(&mut self, formula: &str) -> &Vec<Vec<char>> {
 
         for i in 2..self.height {
             let mut ast: AST = AST::new();
@@ -89,6 +87,8 @@ impl TruthTable {
             ast.build(&tmp_formula);
             self.truth_table[i][self.width - 3] = if ast.eval() { '1' } else { '0' };
         }
+
+        &self.truth_table
     }
 
     pub fn print(&self) {
