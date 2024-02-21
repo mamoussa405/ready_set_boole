@@ -28,6 +28,8 @@ mod tests {
     #[test]
     fn logical_and_tests() {
         assert!(eval_formula("11&"));
+        assert!(eval_formula("11&11&&"));
+        assert!(!eval_formula("10&11&&"));
         assert!(!eval_formula("01&"));
         assert!(!eval_formula("10&"));
         assert!(!eval_formula("00&"));
@@ -44,6 +46,8 @@ mod tests {
         assert!(eval_formula("01|"));
         assert!(eval_formula("10|"));
         assert!(!eval_formula("00|"));
+        assert!(!eval_formula("00|00||"));
+        assert!(!eval_formula("01|00|&"));
         assert!(eval_formula("11|1|0|1|"));
         assert!(eval_formula("111||"));
         assert!(eval_formula("111||0|"));
@@ -58,6 +62,8 @@ mod tests {
         assert!(eval_formula("01^"));
         assert!(!eval_formula("11^"));
         assert!(!eval_formula("00^"));
+        assert!(!eval_formula("11^11^^"));
+        assert!(eval_formula("10^11^^"));
         assert!(!eval_formula("11^1^0^1^"));
         assert!(eval_formula("111^^"));
         assert!(eval_formula("111^^0^"));
@@ -78,6 +84,7 @@ mod tests {
         assert!(!eval_formula("1111>>>11>>11>1>0>>"));
         assert!(eval_formula("0000>>>00>>00>0>0>>"));
         assert!(eval_formula("1111>>>10>>11>1>1>>"));
+        assert!(!eval_formula("111>0>>"));
     }
 
     #[test]
@@ -103,6 +110,9 @@ mod tests {
         assert!(!eval_formula("0!!"));
         assert!(!eval_formula("1!0|"));
         assert!(eval_formula("1!0!!!|1="));
+        assert!(eval_formula("10&!1|"));
+        assert!(eval_formula("0!0!&"));
+        assert!(!eval_formula("1!1!&"));
     }
 
     #[test]
@@ -113,6 +123,8 @@ mod tests {
         assert!(!eval_formula("11^!11&=0>11=|11=10=!>^"));
         assert!(!eval_formula("1!1^11&=1>11=|11=10=!>^"));
         assert!(eval_formula("11!1^1&=!11=|11=10=!>^!"));
+        assert!(eval_formula("10>10>01>&="));
+        assert!(!eval_formula("10&11|&"));
     }
 
     #[test]
@@ -148,6 +160,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid formula")]
     fn invalid_formula_no_enough_operators_test5() {
+        eval_formula("110&!");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test6() {
         eval_formula("1111&=>11=|11=1!0=>^&");
     }
 
