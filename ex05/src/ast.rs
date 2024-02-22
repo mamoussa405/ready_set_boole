@@ -1,6 +1,8 @@
+mod nnf;
+
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Symbols {
     Char(char),
     Not,
@@ -11,11 +13,13 @@ enum Symbols {
     LogEq,
 }
 
-#[derive(Debug)]
+type RcNode = Rc<RefCell<Option<Box<Node>>>>;
+
+#[derive(Debug, Clone)]
 struct Node {
     data: Symbols,
-    left: Rc<RefCell<Option<Box<Node>>>>,
-    right: Rc<RefCell<Option<Box<Node>>>>,
+    left: RcNode,
+    right: RcNode,
 }
 
 impl Node {
@@ -30,28 +34,30 @@ impl Node {
 
 #[derive(Debug)]
 pub struct AST {
-    root: Rc<RefCell<Option<Box<Node>>>>,
+    root: RcNode,
+    stack: Vec<RcNode>,
+    insert_left: bool,
 }
 
 impl AST {
     pub fn new() -> Self {
         Self {
             root: Rc::new(RefCell::new(None)),
+            stack: Vec::new(),
+            insert_left: false,
         }
     }
 
     pub fn build(&mut self, formula: &str) {
         let mut stack: Vec<char> = Vec::new();
-        let mut insert_right: bool = false;
         let mut is_oper: bool = false;
         let mut processed: usize = 0;
-
 
         for c in formula.as_bytes() {
             match c {
                 b'A'..=b'Z' => stack.push(*c as char),
-                b'|' => self.add_sub_tree(&mut stack, Symbols::Or, insert_right),
-                b'&' => self.add_sub_tree(&mut stack, Symbols::And, insert_right),
+                b'|' => self.add_sub_tree(&mut stack, Symbols::Or),
+                b'&' => self.add_sub_tree(&mut stack, Symbols::And),
                 b'!' => {
                     if is_oper || (formula.len() - processed == 1) {
                         self.add_not_node(&mut stack, formula.len() - processed == 1);
@@ -59,25 +65,19 @@ impl AST {
                         let top: char = stack.pop().unwrap_or_else(|| {
                             panic!("Invalid formula");
                         });
-                        
+
                         if top != '!' {
                             stack.push(top);
                             stack.push(*c as char);
                         }
                     }
                 }
-                b'^' => self.add_sub_tree(&mut stack, Symbols::Xor, insert_right),
-                b'>' => self.add_sub_tree(&mut stack, Symbols::MatCond, insert_right),
-                b'=' => self.add_sub_tree(&mut stack, Symbols::LogEq, insert_right),
+                b'^' => self.add_sub_tree(&mut stack, Symbols::Xor),
+                b'>' => self.add_sub_tree(&mut stack, Symbols::MatCond),
+                b'=' => self.add_sub_tree(&mut stack, Symbols::LogEq),
                 _ => panic!("Invalid formula"),
             }
-
-            match c {
-                b'A'..=b'Z' => insert_right = false,
-                b'|' | b'&' | b'!' | b'^' | b'>' | b'=' => insert_right = true,
-                _ => {}
-            }
-            is_oper = if *c != b'1' && *c != b'0' && *c != b'!' {
+            is_oper = if (*c < b'A' || *c > b'Z') && *c != b'!' {
                 true
             } else {
                 false
@@ -88,100 +88,107 @@ impl AST {
         if !stack.is_empty() {
             panic!("Invalid formula");
         }
+        if self.stack.len() > 1 {
+            panic!("Invalid formula");
+        }
+        let top: RcNode = self.stack.pop().unwrap_or_else(|| {
+            panic!("Invalid formula");
+        });
+
+        self.root = Rc::clone(&top);
+    }
+
+    pub fn simplify_material_properties(&mut self) {
+        nnf::rewrite_equivalence(self.root.borrow_mut().as_mut());
+        nnf::rewrite_material_conditions(self.root.borrow_mut().as_mut());
+        nnf::rewrite_xor_operator(self.root.borrow_mut().as_mut());
+        // nnf::morgan_law_and_double_negation(self.root.borrow_mut().as_mut(), false);
+    }
+
+    fn get_top(&mut self, stack: &mut Vec<char>) -> RcNode {
+        let mut top: char = stack.pop().unwrap_or_else(|| {
+            panic!("Invalid formula");
+        });
+        let new_node: RcNode;
+
+        if top == '!' {
+            new_node = 
+                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
+            top = stack.pop().unwrap_or_else(|| {
+                panic!("Invalid formula");
+            });
+            new_node.borrow_mut().as_mut().unwrap().right =
+                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Char(top))))));
+        } else {
+            new_node =
+                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Char(top))))));
+        }
+
+        new_node
     }
 
     fn add_not_node(&mut self, stack: &mut Vec<char>, pop: bool) {
-        let not_node: Rc<RefCell<Option<Box<Node>>>> =
+        let new_node: RcNode =
             Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
 
-        if self.root.borrow_mut().is_none() {
-            if pop {
-                let top: char = stack.pop().unwrap_or_else(|| {
-                    panic!("Invalid formula");
-                });
-
-                not_node.borrow_mut().as_mut().unwrap().right = 
-                    Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Char(top))))));
-            }
-            self.root = Rc::clone(&not_node);
+        if self.stack.is_empty() && pop {
+            new_node.borrow_mut().as_mut().unwrap().right = self.get_top(stack);
+            self.stack.push(new_node);
         } else {
-            not_node.borrow_mut().as_mut().unwrap().right = Rc::clone(&self.root);
-            self.root = Rc::clone(&not_node);
+            let rhs: RcNode = self.stack.pop().unwrap_or_else(|| {
+                panic!("Invalid formula");
+            });
+
+            new_node.borrow_mut().as_mut().unwrap().right = Rc::clone(&rhs);
+            self.stack.push(new_node);
         }
     }
 
-    fn add_sub_tree(&mut self, stack: &mut Vec<char>, symbol: Symbols, insert_right: bool) {
-        let sub_root: Rc<RefCell<Option<Box<Node>>>> =
-            Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
-
-        if self.root.borrow_mut().is_none() {
-            let rhs = stack.pop().unwrap_or_else(|| {
+    fn add_sub_tree(&mut self, stack: &mut Vec<char>, symbol: Symbols) {
+        if stack.len() > 1 {
+            let new_node: RcNode = 
+                Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
+            self.insert_left = false;
+            
+            new_node.borrow_mut().as_mut().unwrap().right = self.get_top(stack);
+            new_node.borrow_mut().as_mut().unwrap().left = self.get_top(stack);
+            if !stack.is_empty() {
+                self.insert_left = true;
+            }
+            self.stack.push(new_node);
+        } else  if stack.len() == 1 {
+            let top: RcNode = self.stack.pop().unwrap_or_else(|| {
                 panic!("Invalid formula");
             });
-            let lhs = stack.pop().unwrap_or_else(|| {
-                panic!("Invalid formula");
-            });
+            let new_node: RcNode = 
+                Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
 
-            sub_root.borrow_mut().as_mut().unwrap().left = 
-                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Char(lhs))))));
-            sub_root.borrow_mut().as_mut().unwrap().right = 
-                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Char(rhs))))));
-            self.root = Rc::clone(&sub_root);
-        } else {
-            let top = stack.pop().unwrap_or_else(|| {
-                panic!("Invalid formula");
-            });
-
-            if insert_right {
-                sub_root.borrow_mut().as_mut().unwrap().left = if top == '1' {
-                    Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::True)))))
-                } else {
-                    Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::False)))))
-                };
-                sub_root.borrow_mut().as_mut().unwrap().right = Rc::clone(&self.root);
+            new_node.borrow_mut().as_mut().unwrap().right = if !self.insert_left {
+                self.get_top(stack)
             } else {
-                sub_root.borrow_mut().as_mut().unwrap().right = if top == '1' {
-                    Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::True)))))
-                } else {
-                    Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::False)))))
-                };
-                sub_root.borrow_mut().as_mut().unwrap().left = Rc::clone(&self.root);
-            }
-            self.root = Rc::clone(&sub_root);
+                Rc::clone(&top)
+            };
+            new_node.borrow_mut().as_mut().unwrap().left = if self.insert_left {
+                self.get_top(stack)
+            } else {
+                Rc::clone(&top)
+            };
+            self.insert_left = false;
+            self.stack.push(new_node);
+        } else if !self.stack.is_empty() {
+            let rhs: RcNode = self.stack.pop().unwrap();
+            let lhs: RcNode = self.stack.pop().unwrap_or_else(|| {
+                panic!("Invalid formula");
+            });
+            let new_node: RcNode = 
+                Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
+            
+            new_node.borrow_mut().as_mut().unwrap().right = Rc::clone(&rhs);
+            new_node.borrow_mut().as_mut().unwrap().left = Rc::clone(&lhs);
+            self.stack.push(new_node);
+        } else {
+            panic!("Invalid formula");
         }
     }
 
-    pub fn eval(&self) -> bool {
-        self.eval_tree(self.root.borrow().as_ref())
-    }
-
-    fn eval_tree(&self, root: Option<&Box<Node>>) -> bool {
-        match root.as_ref().unwrap().data {
-            Symbols::And => {
-                self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
-                    & self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
-            }
-            Symbols::Or => {
-                self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
-                    | self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
-            }
-            Symbols::Xor => {
-                self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
-                    ^ self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
-            }
-            Symbols::MatCond => {
-                !(self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
-                    && !self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref()))
-            }
-            Symbols::LogEq => {
-                self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
-                    == self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
-            }
-            Symbols::Not => {
-                !self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
-            },
-            Symbols::True => true,
-            Symbols::False => false,
-        }
-    }
 }

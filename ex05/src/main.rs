@@ -1,3 +1,5 @@
+use ex05;
+
 fn main() {
-    println!("Hello, world!");
+    ex05::negation_normal_form("AB^");
 }
