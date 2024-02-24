@@ -16,7 +16,7 @@ enum Symbols {
 type RcNode = Rc<RefCell<Option<Box<Node>>>>;
 
 #[derive(Debug, Clone)]
-struct Node {
+pub struct Node {
     data: Symbols,
     left: RcNode,
     right: RcNode,
@@ -102,8 +102,32 @@ impl AST {
         nnf::rewrite_equivalence(Rc::clone(&self.root));
         nnf::rewrite_material_conditions(Rc::clone(&self.root));
         nnf::rewrite_xor_operator(Rc::clone(&self.root));
-        nnf::remove_double_negations(Rc::clone(&self.root), true);
-        // nnf::morgan_law_and_double_negation(self.root.borrow_mut().as_mut(), false);
+        self.root = nnf::eliminate_double_negation(Rc::clone(&self.root), 0);
+        nnf::remove_double_negations(Rc::clone(&self.root));
+        let mut is_not_node: bool = false;
+
+        if let Symbols::Not = self.root.borrow().as_ref().unwrap().data {
+            is_not_node = true;
+        }
+        if is_not_node {
+            // match self.root.borrow().as_ref() {
+            //     Some(ref node) => {
+            //         if let Symbols::Char(_) = node.right.borrow().as_ref().unwrap().data {
+            //             return;
+            //         }
+            //     },
+            //     None => {}
+            // }
+            let (right_subtree, call_subtree) = nnf::remove_not_node(Rc::clone(&self.root), true);
+
+            self.root = right_subtree;
+            if call_subtree {
+                nnf::morgan_law(Rc::clone(&self.root), is_not_node);
+            }
+        } else {
+            nnf::morgan_law(Rc::clone(&self.root), false);
+        }
+        nnf::remove_double_negations(Rc::clone(&self.root));
     }
 
     fn get_top(&mut self, stack: &mut Vec<char>) -> RcNode {

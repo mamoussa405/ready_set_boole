@@ -101,7 +101,7 @@ pub fn rewrite_xor_operator(curr_node: RcNode) {
     }
 }
 
-fn eliminate_double_negation(curr_node: RcNode, not_oper_cnt: usize) -> RcNode {
+pub fn eliminate_double_negation(curr_node: RcNode, not_oper_cnt: usize) -> RcNode {
     match curr_node.borrow_mut().as_mut() {
         Some(ref mut node) => match node.data {
             Symbols::Not => 
@@ -125,75 +125,89 @@ fn eliminate_double_negation(curr_node: RcNode, not_oper_cnt: usize) -> RcNode {
 
 }
 
-pub fn remove_double_negations(mut curr_node: RcNode, is_root: bool) {
+pub fn remove_double_negations(mut curr_node: RcNode) {
     if curr_node.borrow().is_none() {
         return;
     }
     if let Symbols::Char(_) = curr_node.borrow().as_ref().unwrap().data {
         return;
     }
-    if is_root {
-        let mut res: RcNode = Rc::new(RefCell::new(None));
-        match curr_node.borrow_mut().as_mut() {
-            Some(ref mut node) => match node.data {
-                Symbols::Not => {
-                    res = eliminate_double_negation(Rc::clone(&curr_node), 0);
-                    match res.borrow_mut().as_mut() {
-                        Some(ref mut node) => match node.data {
-                            Symbols::Not => {
-                                remove_double_negations(Rc::clone(&node.right), false)
-                            }
-                            _ => {
-                                remove_double_negations(Rc::clone(&node.right), false);
-                                remove_double_negations(Rc::clone(&node.left), false);
-                            }
-                        },
-                        None => {}
-                    }
+    match curr_node.borrow_mut().as_mut() {
+        Some(ref mut node) => {
+            node.right = eliminate_double_negation(Rc::clone(&node.right), 0);
+            node.left = eliminate_double_negation(Rc::clone(&node.left), 0);
+            remove_double_negations(Rc::clone(&node.left));
+            remove_double_negations(Rc::clone(&node.right));
+        },
+        None => {}
+    }
+}
 
-                }
-                _ => {
-                    remove_double_negations(Rc::clone(&node.right), false);
-                    remove_double_negations(Rc::clone(&node.left), false);
-                }
-            },
-            None => {}
-        };
-        if res.borrow().is_some() {
-            curr_node = Rc::clone(&res);
+pub fn remove_not_node(curr_node: RcNode, found_not: bool) -> (RcNode, bool) {
+    match curr_node.borrow().as_ref() {
+        Some(ref node) => {
+            if let Symbols::Not = node.data {
+                remove_not_node(Rc::clone(&node.right), found_not)
+            } else {
+                match node.data {
+                    Symbols::And | Symbols::Or => {
+                        return (Rc::clone(&curr_node), true);
+                    },
+                    _ => {
+                        if found_not {
+                            let not_node: RcNode =
+                                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
+
+                            not_node.borrow_mut().as_mut().unwrap().right = Rc::clone(&curr_node);
+                            return (not_node, false);
+                        } else {
+                            return (Rc::clone(&curr_node), false);
+                        }
+                    }
+                } 
+            }
+        },
+        None => {
+            return (Rc::new(RefCell::new(None)), false);
         }
-    } 
-    // else {
-    //     match curr_node.borrow_mut().as_mut() {
-    //         Some(ref mut node) => {
-    //             // if node.right.borrow_mut().is_some() {
-    //                 let mut res: RcNode = Rc::new(RefCell::new(None));
-    //                 match node.right.borrow().as_ref().unwrap().data {
-    //                     Symbols::Not => {
-    //                         res = eliminate_double_negation(Rc::clone(&node.right), 0);
-    //                         remove_double_negations(Rc::clone(&res.borrow().as_ref().unwrap().right), false);
-    //                     }
-    //                     _ => remove_double_negations(Rc::clone(&node.right), false),
-    //                 };
-    //                 // if res.borrow().is_some() {
-    //                     node.right = Rc::clone(&res);
-    //                 // }
-    //             // }
-    //             // if node.left.borrow_mut().is_some() {
-    //                 let mut res: RcNode = Rc::new(RefCell::new(None));
-    //                 match node.left.borrow().as_ref().unwrap().data {
-    //                     Symbols::Not => {
-    //                         res = eliminate_double_negation(Rc::clone(&node.left), 0);
-    //                         remove_double_negations(Rc::clone(&res.borrow().as_ref().unwrap().left), false);
-    //                     }
-    //                     _ => remove_double_negations(Rc::clone(&node.left), false),
-    //                 };
-    //                 // if res.borrow().is_some() {
-    //                     node.left = Rc::clone(&res);
-    //                 // }
-    //             // }
-    //         },
-    //         None => {}
-    //     }
-    // }
+    }
+}
+
+pub fn morgan_law(mut curr_node: RcNode, mut found_not: bool) {
+    if curr_node.borrow().is_none() {
+        return;
+    }
+    match curr_node.borrow_mut().as_mut() {
+        Some(ref mut node) => {
+            if found_not {
+                match node.data {
+                    Symbols::And => node.data = Symbols::Or,
+                    Symbols::Or => node.data = Symbols::And,
+                    _ => {}
+                }
+            }
+            let tmp: bool = found_not;
+            if let Symbols::Not = node.right.borrow().as_ref().unwrap().data {
+                found_not = !found_not;
+            }
+            let (right_subtree, call_subtree) = remove_not_node(Rc::clone(&node.right), found_not);
+            
+            node.right = right_subtree;
+            if call_subtree {
+                morgan_law(Rc::clone(&node.right), found_not);
+            }
+
+            found_not = tmp;
+            if let Symbols::Not = node.left.borrow().as_ref().unwrap().data {
+                found_not = !found_not;
+            }
+            let (left_subtree, call_subtree) = remove_not_node(Rc::clone(&node.left), found_not);
+            
+            node.left = left_subtree;
+            if call_subtree {
+                morgan_law(Rc::clone(&node.left), found_not);
+            }
+        },
+        None => {}
+    }
 }
