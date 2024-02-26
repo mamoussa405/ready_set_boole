@@ -106,18 +106,13 @@ impl AST {
         nnf::remove_double_negations(Rc::clone(&self.root));
         let mut is_not_node: bool = false;
 
+        if let Symbols::Char(_) = self.root.borrow().as_ref().unwrap().data {
+            return;
+        }
         if let Symbols::Not = self.root.borrow().as_ref().unwrap().data {
             is_not_node = true;
         }
         if is_not_node {
-            // match self.root.borrow().as_ref() {
-            //     Some(ref node) => {
-            //         if let Symbols::Char(_) = node.right.borrow().as_ref().unwrap().data {
-            //             return;
-            //         }
-            //     },
-            //     None => {}
-            // }
             let (right_subtree, call_subtree) = nnf::remove_not_node(Rc::clone(&self.root), true);
 
             self.root = right_subtree;
@@ -128,6 +123,10 @@ impl AST {
             nnf::morgan_law(Rc::clone(&self.root), false);
         }
         nnf::remove_double_negations(Rc::clone(&self.root));
+    }
+
+    pub fn get_rpn_formula(&self) -> String {
+        nnf::get_rpn_formula(Rc::clone(&self.root))
     }
 
     fn get_top(&mut self, stack: &mut Vec<char>) -> RcNode {

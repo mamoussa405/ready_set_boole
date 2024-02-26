@@ -77,8 +77,8 @@ fn get_xor_right_subtree(curr_node: &mut Box<Node>) -> RcNode {
     not_node.borrow_mut().as_mut().unwrap().right = Rc::new(RefCell::new(Some(
         curr_node.left.borrow().as_ref().unwrap().clone(),
     )));
-    and_node.borrow_mut().as_mut().unwrap().right = Rc::clone(&curr_node.right);
-    and_node.borrow_mut().as_mut().unwrap().left = Rc::clone(&not_node);
+    and_node.borrow_mut().as_mut().unwrap().left = Rc::clone(&curr_node.right);
+    and_node.borrow_mut().as_mut().unwrap().right = Rc::clone(&not_node);
 
     and_node
 }
@@ -125,7 +125,7 @@ pub fn eliminate_double_negation(curr_node: RcNode, not_oper_cnt: usize) -> RcNo
 
 }
 
-pub fn remove_double_negations(mut curr_node: RcNode) {
+pub fn remove_double_negations(curr_node: RcNode) {
     if curr_node.borrow().is_none() {
         return;
     }
@@ -173,7 +173,7 @@ pub fn remove_not_node(curr_node: RcNode, found_not: bool) -> (RcNode, bool) {
     }
 }
 
-pub fn morgan_law(mut curr_node: RcNode, mut found_not: bool) {
+pub fn morgan_law(curr_node: RcNode, mut found_not: bool) {
     if curr_node.borrow().is_none() {
         return;
     }
@@ -209,5 +209,26 @@ pub fn morgan_law(mut curr_node: RcNode, mut found_not: bool) {
             }
         },
         None => {}
+    }
+}
+
+pub fn get_rpn_formula(curr_node: RcNode) -> String {
+    let mut res: String = String::new();
+
+    match curr_node.borrow().as_ref() {
+        Some(ref node) => {
+            res += &get_rpn_formula(Rc::clone(&node.left));
+            res += &get_rpn_formula(Rc::clone(&node.right));
+            match node.data {
+                Symbols::And => res += "&",
+                Symbols::Or => res += "|",
+                Symbols::Not => res += "!",
+                Symbols::Char(c) => res += &c.to_string(),
+                _ => {}
+            };
+
+            res
+        },
+        None => "".to_string()
     }
 }

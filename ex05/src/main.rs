@@ -1,5 +1,5 @@
 use ex05;
 
 fn main() {
-    ex05::negation_normal_form("AB&!!");
+    println!("res: {} ", ex05::negation_normal_form("AB^"));
 }
