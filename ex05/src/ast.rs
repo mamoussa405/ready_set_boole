@@ -2,6 +2,7 @@ mod nnf;
 
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
+/// The possible tokens in the AST
 #[derive(Debug, Clone)]
 enum Symbols {
     Char(char),
@@ -15,6 +16,7 @@ enum Symbols {
 
 type RcNode = Rc<RefCell<Option<Box<Node>>>>;
 
+/// The AST node
 #[derive(Debug, Clone)]
 pub struct Node {
     data: Symbols,
@@ -47,18 +49,28 @@ impl AST {
             insert_left: false,
         }
     }
-
+    /// Build the AST from a string
+    /// # Arguments
+    /// * `formula` - A string slice that holds the formula
+    /// # Panics
+    /// If the formula is invalid
     pub fn build(&mut self, formula: &str) {
         let mut stack: Vec<char> = Vec::new();
         let mut is_oper: bool = false;
         let mut processed: usize = 0;
 
+
         for c in formula.as_bytes() {
             match c {
-                b'A'..=b'Z' => stack.push(*c as char),
+                b'A'..b'Z' => stack.push(*c as char),
                 b'|' => self.add_sub_tree(&mut stack, Symbols::Or),
                 b'&' => self.add_sub_tree(&mut stack, Symbols::And),
                 b'!' => {
+                    /*
+                        if the previous character was an operator or if we are at the end of the
+                        formula, we should add a new not node to the tree, otherwise we should
+                        add the negation operator to the stack to use it again in the next iteration.
+                     */
                     if is_oper || (formula.len() - processed == 1) {
                         self.add_not_node(&mut stack, formula.len() - processed == 1);
                     } else {
@@ -66,6 +78,10 @@ impl AST {
                             panic!("Invalid formula");
                         });
 
+                        /*
+                            if the top of the stack is not a negation operator we should push it again
+                            to the stack and add a negation operator to use it again in the next iteration.
+                         */
                         if top != '!' {
                             stack.push(top);
                             stack.push(*c as char);
@@ -77,7 +93,19 @@ impl AST {
                 b'=' => self.add_sub_tree(&mut stack, Symbols::LogEq),
                 _ => panic!("Invalid formula"),
             }
-            is_oper = if (*c < b'A' || *c > b'Z') && *c != b'!' {
+            /*
+                This boolean is used to check if the previous character was an operator,
+                we will use it to help us when we have a negation operator to decide if we
+                should add a new node to the tree or just add the negation operator to the stack
+                to use it again in the next iteration.
+                for example:
+                1. if we have a formula like "AB&!", we should add a new not node to the tree
+                that will be a negation of the subtree with the parent node "&" and the children
+                "A" and "B".
+                2. if we have a formula like "A!!!!", when we find a negation operator, we just
+                check if should add it to stack if the top of the stack is not a negation operator.
+             */
+            is_oper = if *c != b'1' && *c != b'0' && *c != b'!' {
                 true
             } else {
                 false
@@ -88,6 +116,11 @@ impl AST {
         if !stack.is_empty() {
             panic!("Invalid formula");
         }
+        /*
+            Here if the stack that we used to store the subtrees contains more than one
+            subtree, means that the formula is invalid, because we are at the end and the root
+            should have one subtree only.
+         */
         if self.stack.len() > 1 {
             panic!("Invalid formula");
         }
@@ -95,15 +128,47 @@ impl AST {
             panic!("Invalid formula");
         });
 
+        // if all good we should link the root to the rest of the tree
         self.root = Rc::clone(&top);
     }
 
+    /// Simplify the material properties by applying the following rules:
+    /// 1. Rewrite the equivalence operator
+    /// 2. Rewrite the material conditions
+    /// 3. Rewrite the xor operator
+    /// 4. Eliminate double negation
+    /// 5. Apply the Morgan's law
     pub fn simplify_material_properties(&mut self) {
+        /*
+            Apply the Rewrite equivalence rule on the tree:
+            (A <=> B) <=> (A => B) & (B => A)
+         */
         nnf::rewrite_equivalence(Rc::clone(&self.root));
+        /*
+            Apply the Rewrite material conditions rule on the tree:
+            (A => B) <=> !A | B
+         */
         nnf::rewrite_material_conditions(Rc::clone(&self.root));
+        /*
+            Apply the Rewrite xor operator rule on the tree:
+            A ^ B <=> (A & !B) | (B & !A)
+         */
         nnf::rewrite_xor_operator(Rc::clone(&self.root));
+        /*
+            Eliminate double negation from the tree:
+            !!A <=> A
+         */
         self.root = nnf::eliminate_double_negation(Rc::clone(&self.root), 0);
         nnf::remove_double_negations(Rc::clone(&self.root));
+        /*
+            Apply the Morgan's law on the tree:
+            !(A & B) <=> !A | !B
+            !(A | B) <=> !A & !B
+            we start by applying the Morgan's law on the root of the tree if it's a not node,
+            and we decide if we should call the function on the subtrees or not,
+            if after applying the Morgan's law and we get the a character in the right subtree,
+            there is no need to call the function on the subtree.
+         */
         let mut is_not_node: bool = false;
 
         if let Symbols::Char(_) = self.root.borrow().as_ref().unwrap().data {
@@ -125,16 +190,28 @@ impl AST {
         nnf::remove_double_negations(Rc::clone(&self.root));
     }
 
+    /// Get the RPN formula using Post Order Traversal
     pub fn get_rpn_formula(&self) -> String {
         nnf::get_rpn_formula(Rc::clone(&self.root))
     }
 
+    /// Get the top element from the stack
+    /// # Arguments
+    /// * `stack` - A mutable reference to a vector of characters
+    /// # Panics
+    /// If the formula is invalid
     fn get_top(&mut self, stack: &mut Vec<char>) -> RcNode {
         let mut top: char = stack.pop().unwrap_or_else(|| {
             panic!("Invalid formula");
         });
         let new_node: RcNode;
 
+        /*
+            If the top of the stack is a negation operator, we should create a new node
+            with the negation operator and the right child will be the top of the stack.
+
+            Otherwise we should create a new node with the top of the stack.
+         */
         if top == '!' {
             new_node = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
             top = stack.pop().unwrap_or_else(|| {
@@ -149,13 +226,33 @@ impl AST {
         new_node
     }
 
+    /// Add a new not node to the tree
+    /// # Arguments
+    /// * `stack` - A mutable reference to a vector of characters
+    /// * `pop` - A boolean that indicates if we should pop the top of the stack
+    /// # Panics
+    /// If the formula is invalid
     fn add_not_node(&mut self, stack: &mut Vec<char>, pop: bool) {
-        let new_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
+        let new_node: RcNode =
+            Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
 
         if self.stack.is_empty() && pop {
+            /*
+                If the self.stack in which we store the subtrees is empty and we should pop the top
+                element of the stack with the characters, we get the top element from the stack
+                we add it as a right child to the not node and we push the subtree to the self.stack
+                Note: this case happens when we have a formula with just '!' operator and a single
+                character.
+             */
             new_node.borrow_mut().as_mut().unwrap().right = self.get_top(stack);
             self.stack.push(new_node);
         } else {
+            /*
+                If the self.stack is not empty, we should add a not node as a root of the top
+                subtree in the self.stack and push it as a new subtree.
+                Note: because the not node has only one child we always add the subtree to the right
+                of the not node.
+             */
             let rhs: RcNode = self.stack.pop().unwrap_or_else(|| {
                 panic!("Invalid formula");
             });
@@ -165,22 +262,58 @@ impl AST {
         }
     }
 
+    /// Add a new subtree to the tree
+    /// # Arguments
+    /// * `stack` - A mutable reference to a vector of characters
+    /// * `symbol` - A symbol that indicates the operator
+    /// # Panics
+    /// If the formula is invalid
     fn add_sub_tree(&mut self, stack: &mut Vec<char>, symbol: Symbols) {
         if stack.len() > 1 {
-            let new_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
+            /*
+                If the stack with the characters contains more than one character and we found
+                a new operator, we should create a new node with that operator that will be the
+                root of the subtree, and we should pop two elements from the stack that will be 
+                the left and right children of the subtree.
+             */
+            let new_node: RcNode = 
+                Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
             self.insert_left = false;
-
+            
             new_node.borrow_mut().as_mut().unwrap().right = self.get_top(stack);
             new_node.borrow_mut().as_mut().unwrap().left = self.get_top(stack);
+            /*
+                This is an edge case, if the stack is still not empty, means we have more than 
+                two characters in the stack, we should set the insert_left to true to indicate
+                to next operator that we should insert this character as a left child of the next
+                subtree, and the right subtree will be the current subtree tha we are building in
+                this case.
+                Example: if we have the following formula "111|&", when we find the first operator
+                which is '|', we will create a subtre with the root Symbols::Or and the left and right
+                children will be Symbols::True, so at this point the stack still contains the '1'
+                and when we find the next operator which is '&', we should insert the '1' as a 
+                left child.
+                But if the foumula is as follows "11|1&", when we find the first operator
+                which is '|' the process will be the same, but when we find the next operator which is
+                '&', we should insert the '1' comming after '|' as a right child.
+             */
             if !stack.is_empty() {
                 self.insert_left = true;
             }
             self.stack.push(new_node);
-        } else if stack.len() == 1 {
+        } else  if stack.len() == 1 {
+            /*
+                If we found and operator and the stack with the characters contains only one character,
+                we will create a subtree with the root as the operator and the left and right children
+                will be respectively either : the top of the stack with characters, the top of the self.stack
+                with subtrees, or the top of the self.stack with subtrees, the top of the stack with characters.
+                Depending on the value of the insert_left boolean.
+             */
             let top: RcNode = self.stack.pop().unwrap_or_else(|| {
                 panic!("Invalid formula");
             });
-            let new_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
+            let new_node: RcNode = 
+                Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
 
             new_node.borrow_mut().as_mut().unwrap().right = if !self.insert_left {
                 self.get_top(stack)
@@ -195,12 +328,18 @@ impl AST {
             self.insert_left = false;
             self.stack.push(new_node);
         } else if !self.stack.is_empty() {
+            /*
+                If we found and operator and the stack with the characters is empty, we should create
+                a subtree with the root as the operator and the left and right children will be the top
+                two subtrees in the self.stack.
+             */
             let rhs: RcNode = self.stack.pop().unwrap();
             let lhs: RcNode = self.stack.pop().unwrap_or_else(|| {
                 panic!("Invalid formula");
             });
-            let new_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
-
+            let new_node: RcNode = 
+                Rc::new(RefCell::new(Some(Box::new(Node::new(symbol)))));
+            
             new_node.borrow_mut().as_mut().unwrap().right = Rc::clone(&rhs);
             new_node.borrow_mut().as_mut().unwrap().left = Rc::clone(&lhs);
             self.stack.push(new_node);

@@ -1,5 +1,14 @@
 /// add two integers a and b using bitwise operators
 /// and return the result as a u32
+/// # Examples
+/// ```
+/// use ex01::adder;
+/// let mut a: u32 = 3;
+/// let b: u32 = 3;
+///
+/// adder(&mut a, b);
+/// assert_eq!(a, 6);
+/// ```
 fn adder(a: &mut u32, b: u32) {
     let mut res: u32 = 0;
     let mut carry: bool = false;
@@ -29,6 +38,15 @@ fn adder(a: &mut u32, b: u32) {
 /// multiply two integers a and b using bitwise operators
 /// by calling the adder function from the previous exercise
 /// and return the result as a u32
+/// # Examples
+/// ```
+/// use ex01::multiplier;
+/// let a: u32 = 5;
+/// let b: u32 = 2;
+/// let res: u32 = multiplier(a, b);
+///
+/// assert_eq!(res, 10);
+/// ```
 pub fn multiplier(a: u32, b: u32) -> u32 {
     let mut min = a.min(b);
     let max = a.max(b);

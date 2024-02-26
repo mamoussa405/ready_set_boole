@@ -3,12 +3,16 @@ mod truth_table;
 use truth_table::TruthTable;
 use std::collections::BTreeSet;
 
+/// Build and print the truth table of the given formula
+/// # Arguments
+/// * `formula` - A string slice that holds the formula to be evaluated 
 fn build_print_truth_table(formula: &str) -> Vec<Vec<char>> {
     if formula.is_empty() {
         panic!("Invalid formula");
     }
     let mut unique_chars: BTreeSet<char>  = BTreeSet::new();
 
+    // Get the unique characters in the formula using a set
     for c in formula.as_bytes() {
         if *c >= b'A' && *c <= b'Z' {
             unique_chars.insert(*c as char);
@@ -18,17 +22,50 @@ fn build_print_truth_table(formula: &str) -> Vec<Vec<char>> {
         panic!("Invalid formula");
     }
 
+    /*
+        The width of the truth table is calculated as follows:
+           - The width of the first column is 5 characters long (| x |)
+           - The width of the rest of the columns is 4 characters long ( x |) * number of unique characters
+     */
     let width: usize = "| x |".len() + (" x |".len() * unique_chars.len());
+    /*
+        The height of the truth table is calculated as follows:
+            2 ^ number of unique characters + 2
+        the + 2 is for the header of the truth table
+        Example of a valid truth table for the formula "AB&" (A and B):
+            | A | B | = |
+            |---|---|---|
+            | 0 | 0 | 0 |
+            | 0 | 1 | 0 |
+            | 1 | 0 | 0 |
+            | 1 | 1 | 1 |
+     */
     let height: usize = (1 << unique_chars.len()) + 2;
     let mut truth_table: TruthTable = TruthTable::new(width, height);
 
     truth_table.fill(unique_chars);
+    // this will be a copy of the truth table we will use it in the tests
     let res: Vec<Vec<char>> = truth_table.eval(formula).clone();
     truth_table.print();
 
     res
 }
 
+/// Print the truth table of the given formula
+/// # Arguments
+/// * `formula` - A string slice that holds the formula to be evaluated
+/// # Example
+/// ```
+/// use ex04::print_truth_table;
+/// print_truth_table("AB&");
+/// // Output:
+/// // | A | B | = |
+/// // |---|---|---|
+/// // | 0 | 0 | 0 |
+/// // | 0 | 1 | 0 |
+/// // | 1 | 0 | 0 |
+/// // | 1 | 1 | 1 |
+/// ```
 pub fn print_truth_table(formula: &str) {
     build_print_truth_table(formula);
 }

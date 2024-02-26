@@ -31,6 +31,7 @@ mod tests {
     #[test]
     fn more_tests() {
         assert_eq!("A", negation_normal_form("A!!"));
+        assert_eq!("A!", negation_normal_form("A!"));
         assert_eq!("A!B&", negation_normal_form("A!B&"));
         assert_eq!("AB&C!D!|&", negation_normal_form("AB&!CD&|!"));
         assert_eq!("EF!&FE!&|M!N|N!M|&|MN!&NM!&|E!F|F!E|&|&", negation_normal_form("EF=MN=="));

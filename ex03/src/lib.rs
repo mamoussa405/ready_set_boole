@@ -1,5 +1,13 @@
 mod ast;
 
+/// Evaluate a logical formula
+/// # Examples
+/// ```
+/// use ex03::eval_formula;
+/// assert!(!eval_formula("10&"));
+/// assert!(eval_formula("10|"));
+/// assert!(eval_formula("11>"));
+/// ```
 pub fn eval_formula(formula: &str) -> bool {
     if formula.is_empty() {
         panic!("Invalid formula");
@@ -8,8 +16,6 @@ pub fn eval_formula(formula: &str) -> bool {
 
     tree.build(formula);
     tree.eval()
-    // dbg!(tree);
-    // true
 }
 
 #[cfg(test)]

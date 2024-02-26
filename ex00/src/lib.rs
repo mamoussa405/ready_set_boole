@@ -1,5 +1,14 @@
 /// add two integers a and b using bitwise operators
 /// and return the result as u32
+/// # Examples
+/// ```
+/// use ex00::adder;
+/// let a: u32 = 3;
+/// let b: u32 = 3;
+/// let res: u32 = adder(a, b);
+///
+/// assert_eq!(res, 6);
+/// ```
 pub fn adder(a: u32, b: u32) -> u32 {
     let mut res: u32 = 0;
     let mut carry: bool = false;
