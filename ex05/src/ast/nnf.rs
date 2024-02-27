@@ -1,6 +1,23 @@
 use super::*;
 
 fn get_equivalence_left_subtree(root: &mut Box<Node>) -> RcNode {
+    /*
+        This function will return the left subtree of the equivalence operator
+        The algorithm is as follows:
+        1. Create a new node with the material condition operator
+        2. Set the left subtree to the left subtree of the root
+        3. Set the right subtree to a clone of the right subtree of the root
+        4. Return the new node
+            +---------------------+       +--------------------+
+            | equivalence subtree |       | material condition |
+            +---------------------+       +--------------------+
+                    <=>                            =>
+                   /   \                          /  \
+                  /     \           --->         /    \ 
+                 /       \                      /      \
+                A         B                    A        B'
+        PS: B' is a clone of B
+     */
     let mat_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::MatCond)))));
 
     mat_node.borrow_mut().as_mut().unwrap().left = Rc::clone(&root.left);
@@ -12,6 +29,23 @@ fn get_equivalence_left_subtree(root: &mut Box<Node>) -> RcNode {
 }
 
 fn get_equivalence_right_subtree(root: &mut Box<Node>) -> RcNode {
+    /*
+        This function will return the right subtree of the equivalence operator
+        The algorithm is as follows:
+        1. Create a new node with the material condition operator
+        2. Set the left subtree to the right subtree of the root
+        3. Set the right subtree to a clone of the left subtree of the root
+        4. Return the new node
+            +---------------------+       +--------------------+
+            | equivalence subtree |       | material condition |
+            +---------------------+       +--------------------+
+                    <=>                            =>
+                   /   \                          /  \
+                  /     \           --->         /    \ 
+                 /       \                      /      \
+                A         B                    B        A'
+        PS: A' is a clone of A
+     */
     let mat_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::MatCond)))));
 
     mat_node.borrow_mut().as_mut().unwrap().left = Rc::clone(&root.right);
@@ -22,7 +56,30 @@ fn get_equivalence_right_subtree(root: &mut Box<Node>) -> RcNode {
     mat_node
 }
 
+/// Rewrite the equivalence operator
+/// # Arguments
+/// * `curr_node` - The root of the AST
 pub fn rewrite_equivalence(curr_node: RcNode) {
+    /*
+        In this function, we will rewrite the equivalence operator following this rule:
+        (A <=> B) <=> (A => B) & (B => A)
+        The algorithm is as follows:
+        1. Iterate through the AST
+        2. If the current node is an equivalence operator, change it to an AND operator
+        3. Update the left subtree with the material condition (A => B)
+        4. Update the right subtree with the material condition (B => A)
+            +---------------------+       +--------------------+
+            | equivalence subtree |       |    rewrite rule    |
+            +---------------------+       +--------------------+
+                    <=>                             &
+                   /   \                          /   \
+                  /     \           --->         /     \ 
+                 /       \                      /       \
+                A         B                    =>        =>
+                                              /  \      /  \
+                                             A    B'   B    A'
+        PS: A' is a clone of A, B' is a clone of B
+     */
     match curr_node.borrow_mut().as_mut() {
         Some(ref mut node) => {
             if let Symbols::LogEq = node.data {
@@ -39,7 +96,26 @@ pub fn rewrite_equivalence(curr_node: RcNode) {
     }
 }
 
+/// Rewrite the implication operator
+/// # Arguments
+/// * `curr_node` - The root of the AST
 pub fn rewrite_material_conditions(curr_node: RcNode) {
+    /*
+        In this function, we will rewrite the material condition operator following this rule:
+        (A => B) <=> !A | B
+        The algorithm is as follows:
+        1. Iterate through the AST
+        2. If the current node is a material condition operator, change it to an OR operator
+        3. Update the left subtree with the negation of A
+            +---------------------+       +--------------------+
+            | material condition  |       |    rewrite rule    |
+            +---------------------+       +--------------------+
+                    =>                             |
+                   /  \                           / \
+                  /    \           --->          /   \ 
+                 /      \                       /     \
+                A        B                    !A       B
+     */
     match curr_node.borrow_mut().as_mut() {
         Some(ref mut node) => {
             if let Symbols::MatCond = node.data {
@@ -58,6 +134,24 @@ pub fn rewrite_material_conditions(curr_node: RcNode) {
 }
 
 fn get_xor_left_subtree(curr_node: &mut Box<Node>) -> RcNode {
+    /*
+        This function will return the left subtree of the XOR operator
+        The algorithm is as follows:
+        1. Create a new node with the AND operator
+        2. Create a new node with the NOT operator
+        3. Set the right subtree of the NOT operator to a clone of the right subtree of the root
+        4. Set the left subtree of the AND operator to the left subtree of the root
+        5. Set the right subtree of the AND operator to the NOT operator
+        6. Return the AND operator
+            +---------------------+       +--------------------+
+            |    XOR operator    |       |    rewrite rule    |
+            +---------------------+       +--------------------+
+                    ^                             &
+                   / \                           / \
+                  /   \           --->          /   \ 
+                 /     \                       /     \
+                A       B                     A      !B
+     */
     let and_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::And)))));
     let not_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
 
@@ -71,6 +165,24 @@ fn get_xor_left_subtree(curr_node: &mut Box<Node>) -> RcNode {
 }
 
 fn get_xor_right_subtree(curr_node: &mut Box<Node>) -> RcNode {
+    /*
+        This function will return the right subtree of the XOR operator
+        The algorithm is as follows:
+        1. Create a new node with the AND operator
+        2. Create a new node with the NOT operator
+        3. Set the right subtree of the NOT operator to a clone of the left subtree of the root
+        4. Set the left subtree of the AND operator to the right subtree of the root
+        5. Set the right subtree of the AND operator to the NOT operator
+        6. Return the AND operator
+            +---------------------+       +--------------------+
+            |    XOR operator    |       |    rewrite rule    |
+            +---------------------+       +--------------------+
+                    ^                             &
+                   / \                           / \
+                  /   \           --->          /   \ 
+                 /     \                       /     \
+                A       B                     B      !A
+     */
     let and_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::And)))));
     let not_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
 
@@ -83,8 +195,29 @@ fn get_xor_right_subtree(curr_node: &mut Box<Node>) -> RcNode {
     and_node
 }
 
+/// Rewrite the XOR operator
+/// # Arguments
+/// * `curr_node` - The root of the AST
 pub fn rewrite_xor_operator(curr_node: RcNode) {
-
+    /*
+        In this function, we will rewrite the XOR operator following this rule:
+        A ^ B <=> (A & !B) | (B & !A)
+        The algorithm is as follows:
+        1. Iterate through the AST
+        2. If the current node is an XOR operator, change it to an OR operator
+        3. Update the left subtree with the AND operator (A & !B)
+        4. Update the right subtree with the AND operator (B & !A)
+            +---------------------+       +--------------------+
+            |    XOR operator    |       |    rewrite rule    |
+            +---------------------+       +--------------------+
+                    ^                             |
+                   / \                           / \
+                  /   \           --->          /   \ 
+                 /     \                       /     \
+                A       B                     &       &
+                                             / \     / \
+                                            A  !B   B  !A
+     */
     match curr_node.borrow_mut().as_mut() {
         Some(ref mut node) => {
             if let Symbols::Xor = node.data {
@@ -101,7 +234,20 @@ pub fn rewrite_xor_operator(curr_node: RcNode) {
     }
 }
 
+/// Eliminate double negation from the current subtree
+/// # Arguments
+/// * `curr_node` - The root of the current subtree
+/// * `not_oper_cnt` - The number of NOT operators
 pub fn eliminate_double_negation(curr_node: RcNode, not_oper_cnt: usize) -> RcNode {
+    /*
+        In this function, we will eliminate the double negation following this rule:
+        !!A <=> A
+        The algorithm is as follows:
+        1. Iterate through the AST
+        2. If the current node is a NOT operator, increment the counter
+        3. If the counter is even, return the current node
+        4. If the counter is odd, return a new NOT operator with the current node as the right subtree
+     */
     match curr_node.borrow_mut().as_mut() {
         Some(ref mut node) => match node.data {
             Symbols::Not => 
@@ -125,7 +271,14 @@ pub fn eliminate_double_negation(curr_node: RcNode, not_oper_cnt: usize) -> RcNo
 
 }
 
+
+/// Remove double negations from the AST
+/// # Arguments
+/// * `curr_node` - The root of the AST
 pub fn remove_double_negations(curr_node: RcNode) {
+    /*
+        Call the eliminate_double_negation function for each node in the AST
+     */
     if curr_node.borrow().is_none() {
         return;
     }
@@ -143,7 +296,22 @@ pub fn remove_double_negations(curr_node: RcNode) {
     }
 }
 
+/// Remove the NOT operator from the current subtree when applying De Morgan's laws
+/// # Arguments
+/// * `curr_node` - The root of the current subtree
+/// * `found_not` - A boolean indicating if a NOT operator was found
 pub fn remove_not_node(curr_node: RcNode, found_not: bool) -> (RcNode, bool) {
+    /*
+        In this function, we will remove the NOT operator from the current subtree when applying De Morgan's laws
+        The algorithm is as follows:
+        1. Iterate through the AST
+        2. If the current node is a NOT operator, call the function recursively with the right subtree and the found_not variable
+        3. If the current node is an AND or OR operator, return a tuple with the current node and true,
+            indicating that the subtree should be called recursively
+        4. If the current node is a leaf, return a new NOT operator with the current node as the right subtree if we found a NOT operator
+            while iterating through the AST or the current node if we didn't find a NOT operator with the option to call the subtree recursively
+            set to false.
+     */
     match curr_node.borrow().as_ref() {
         Some(ref node) => {
             if let Symbols::Not = node.data {
@@ -173,10 +341,11 @@ pub fn remove_not_node(curr_node: RcNode, found_not: bool) -> (RcNode, bool) {
     }
 }
 
+/// Apply De Morgan's law to the AST
+/// # Arguments
+/// * `curr_node` - The root of the AST
+/// * `found_not` - A boolean indicating if a NOT operator was found
 pub fn morgan_law(curr_node: RcNode, mut found_not: bool) {
-    if curr_node.borrow().is_none() {
-        return;
-    }
     match curr_node.borrow_mut().as_mut() {
         Some(ref mut node) => {
             if found_not {
@@ -212,6 +381,9 @@ pub fn morgan_law(curr_node: RcNode, mut found_not: bool) {
     }
 }
 
+/// Get the RPN formula from the AST using Post Order traversal
+/// # Arguments
+/// * `curr_node` - The root of the AST
 pub fn get_rpn_formula(curr_node: RcNode) -> String {
     let mut res: String = String::new();
 

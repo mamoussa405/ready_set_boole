@@ -1,4 +1,4 @@
-mod nnf;
+pub mod nnf;
 
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
@@ -62,7 +62,7 @@ impl AST {
 
         for c in formula.as_bytes() {
             match c {
-                b'A'..b'Z' => stack.push(*c as char),
+                b'A'..=b'Z' => stack.push(*c as char),
                 b'|' => self.add_sub_tree(&mut stack, Symbols::Or),
                 b'&' => self.add_sub_tree(&mut stack, Symbols::And),
                 b'!' => {
