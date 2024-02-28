@@ -346,6 +346,15 @@ pub fn remove_not_node(curr_node: RcNode, found_not: bool) -> (RcNode, bool) {
 /// * `curr_node` - The root of the AST
 /// * `found_not` - A boolean indicating if a NOT operator was found
 pub fn morgan_law(curr_node: RcNode, mut found_not: bool) {
+    /*
+        In this function, we will apply De Morgan's laws to the AST
+        The algorithm is as follows:
+        1. Iterate through the AST
+        2. If the current node is an AND or OR operator, change it to the other operator if we found a NOT operator
+        3. If the current node is a NOT operator, change the found_not variable to its negation
+        4. Call the remove_not_node function for the left and right subtrees, and decide if we should call the subtree recursively
+            if after removing the NOT operator we still have an AND or OR operator.
+     */
     match curr_node.borrow_mut().as_mut() {
         Some(ref mut node) => {
             if found_not {
