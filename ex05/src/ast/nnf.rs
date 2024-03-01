@@ -390,7 +390,7 @@ pub fn morgan_law(curr_node: RcNode, mut found_not: bool) {
     }
 }
 
-/// Get the RPN formula from the AST using Post Order traversal
+/// Get the RPN formula from the AST using Post Order Traversal
 /// # Arguments
 /// * `curr_node` - The root of the AST
 pub fn get_rpn_formula(curr_node: RcNode) -> String {
