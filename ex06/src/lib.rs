@@ -6,6 +6,7 @@ pub fn conjunctive_normal_form(formula: &str) -> String {
     let mut truth_table: TruthTable = TruthTable::new(formula);
 
     truth_table.fill();
-    truth_table.eval(formula);
+    println!("okay");
+    truth_table.eval();
     truth_table.get_cnf_formula()
 }

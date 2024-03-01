@@ -39,6 +39,7 @@ pub struct AST {
     root: RcNode,
     stack: Vec<RcNode>,
     insert_left: bool,
+    not_cnt: usize,
 }
 
 impl AST {
@@ -47,6 +48,7 @@ impl AST {
             root: Rc::new(RefCell::new(None)),
             stack: Vec::new(),
             insert_left: false,
+            not_cnt: 0,
         }
     }
     /// Build the AST from a string
@@ -85,6 +87,7 @@ impl AST {
                         if top != '!' {
                             stack.push(top);
                             stack.push(*c as char);
+                            self.not_cnt += 1;
                         }
                     }
                 }
@@ -105,7 +108,7 @@ impl AST {
                 2. if we have a formula like "A!!!!", when we find a negation operator, we just
                 check if should add it to stack if the top of the stack is not a negation operator.
              */
-            is_oper = if *c != b'1' && *c != b'0' && *c != b'!' {
+            is_oper = if (*c < b'A' || *c > b'Z') && *c != b'!' {
                 true
             } else {
                 false
@@ -213,6 +216,7 @@ impl AST {
             Otherwise we should create a new node with the top of the stack.
          */
         if top == '!' {
+            self.not_cnt -= 1;
             new_node = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
             top = stack.pop().unwrap_or_else(|| {
                 panic!("Invalid formula");
@@ -269,7 +273,7 @@ impl AST {
     /// # Panics
     /// If the formula is invalid
     fn add_sub_tree(&mut self, stack: &mut Vec<char>, symbol: Symbols) {
-        if stack.len() > 1 {
+        if (stack.len() - self.not_cnt) > 1 {
             /*
                 If the stack with the characters contains more than one character and we found
                 a new operator, we should create a new node with that operator that will be the
@@ -301,7 +305,7 @@ impl AST {
                 self.insert_left = true;
             }
             self.stack.push(new_node);
-        } else  if stack.len() == 1 {
+        } else  if (stack.len() - self.not_cnt) == 1 {
             /*
                 If we found and operator and the stack with the characters contains only one character,
                 we will create a subtree with the root as the operator and the left and right children

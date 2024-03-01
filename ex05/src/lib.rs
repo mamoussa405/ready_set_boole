@@ -42,6 +42,7 @@ mod tests {
         assert_eq!("AB!&BA!&|", negation_normal_form("AB^"));
         assert_eq!("A!B|B!A|&", negation_normal_form("AB^!"));
         assert_eq!("A!B|B!A|&C|", negation_normal_form("AB^C>"));
+        assert_eq!("A!B!|C!|", negation_normal_form("AB&!C!|"));
     }
 
     #[test]

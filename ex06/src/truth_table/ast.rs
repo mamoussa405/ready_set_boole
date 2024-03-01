@@ -337,29 +337,38 @@ impl AST {
 
     fn is_valid_cnf_formula(&self, curr_node: RcNode) -> bool {
         match curr_node.borrow().as_ref() {
-            Som(ref node) => {
-                if Symbols::Not = node.data {
-                    match node.data.right.borrow().as_ref() {
-                        Some(ref right_node) => {
-                            match right_node.data {
+            Some(ref node) => {
+                match node.data {
+                    Symbols::MatCond | Symbols::LogEq | Symbols::Xor => return false,
+                    Symbols::Not | Symbols::Or => {
+                        match node.right.borrow().as_ref() {
+                            Some(ref right) => match right.data {
                                 Symbols::True | Symbols::False | Symbols::Not => {},
-                                _ => return false;
-                            }
-                        },
-                        None => return true;
-                    }
-                    match node.data.left.borrow().as_ref() {
-                        Some(ref left_node) => {
-                            match left_node.data {
+                                Symbols::And => return false,
+                                _ => match node.data {
+                                    Symbols::Not => return false,
+                                    _ => {},
+                                }
+                            },
+                            None => return true,
+                        };
+                        match node.left.borrow().as_ref() {
+                            Some(ref left) => match left.data {
                                 Symbols::True | Symbols::False | Symbols::Not => {},
-                                _ => return false;
-                            }
-                        },
-                        None => return true;
-                    }
-                    
+                                Symbols::And => return false,
+                                _ => match node.data {
+                                    Symbols::Not => return false,
+                                    _ => {},
+                                }
+                            },
+                            None => return true,
+                        } 
+                    },
+                    _ => {}
                 }
-            }
+                return self.is_valid_cnf_formula(Rc::clone(&node.right)) && self.is_valid_cnf_formula(Rc::clone(&node.left));
+            },
+            None => return true,
         }
     }
 }

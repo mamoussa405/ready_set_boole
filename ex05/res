@@ -1,0 +1,291 @@
+   Compiling ex05 v0.1.0 (/Users/mamoussa/Desktop/ready_set_boole/ex05)
+    Finished dev [unoptimized + debuginfo] target(s) in 25.80s
+     Running `target/debug/ex05`
+[src/ast.rs:66] &self.stack = []
+[src/ast.rs:67] &stack = []
+[src/ast.rs:66] &self.stack = []
+[src/ast.rs:67] &stack = [
+    'A',
+]
+[src/ast.rs:66] &self.stack = []
+[src/ast.rs:67] &stack = [
+    'A',
+    'B',
+]
+[src/ast.rs:66] &self.stack = [
+    RefCell {
+        value: Some(
+            Node {
+                data: And,
+                left: RefCell {
+                    value: Some(
+                        Node {
+                            data: Char(
+                                'A',
+                            ),
+                            left: RefCell {
+                                value: None,
+                            },
+                            right: RefCell {
+                                value: None,
+                            },
+                        },
+                    ),
+                },
+                right: RefCell {
+                    value: Some(
+                        Node {
+                            data: Char(
+                                'B',
+                            ),
+                            left: RefCell {
+                                value: None,
+                            },
+                            right: RefCell {
+                                value: None,
+                            },
+                        },
+                    ),
+                },
+            },
+        ),
+    },
+]
+[src/ast.rs:67] &stack = []
+[src/ast.rs:66] &self.stack = [
+    RefCell {
+        value: Some(
+            Node {
+                data: Not,
+                left: RefCell {
+                    value: None,
+                },
+                right: RefCell {
+                    value: Some(
+                        Node {
+                            data: And,
+                            left: RefCell {
+                                value: Some(
+                                    Node {
+                                        data: Char(
+                                            'A',
+                                        ),
+                                        left: RefCell {
+                                            value: None,
+                                        },
+                                        right: RefCell {
+                                            value: None,
+                                        },
+                                    },
+                                ),
+                            },
+                            right: RefCell {
+                                value: Some(
+                                    Node {
+                                        data: Char(
+                                            'B',
+                                        ),
+                                        left: RefCell {
+                                            value: None,
+                                        },
+                                        right: RefCell {
+                                            value: None,
+                                        },
+                                    },
+                                ),
+                            },
+                        },
+                    ),
+                },
+            },
+        ),
+    },
+]
+[src/ast.rs:67] &stack = []
+[src/ast.rs:66] &self.stack = [
+    RefCell {
+        value: Some(
+            Node {
+                data: Not,
+                left: RefCell {
+                    value: None,
+                },
+                right: RefCell {
+                    value: Some(
+                        Node {
+                            data: And,
+                            left: RefCell {
+                                value: Some(
+                                    Node {
+                                        data: Char(
+                                            'A',
+                                        ),
+                                        left: RefCell {
+                                            value: None,
+                                        },
+                                        right: RefCell {
+                                            value: None,
+                                        },
+                                    },
+                                ),
+                            },
+                            right: RefCell {
+                                value: Some(
+                                    Node {
+                                        data: Char(
+                                            'B',
+                                        ),
+                                        left: RefCell {
+                                            value: None,
+                                        },
+                                        right: RefCell {
+                                            value: None,
+                                        },
+                                    },
+                                ),
+                            },
+                        },
+                    ),
+                },
+            },
+        ),
+    },
+]
+[src/ast.rs:67] &stack = [
+    'C',
+]
+[src/ast.rs:66] &self.stack = [
+    RefCell {
+        value: Some(
+            Node {
+                data: Not,
+                left: RefCell {
+                    value: None,
+                },
+                right: RefCell {
+                    value: Some(
+                        Node {
+                            data: And,
+                            left: RefCell {
+                                value: Some(
+                                    Node {
+                                        data: Char(
+                                            'A',
+                                        ),
+                                        left: RefCell {
+                                            value: None,
+                                        },
+                                        right: RefCell {
+                                            value: None,
+                                        },
+                                    },
+                                ),
+                            },
+                            right: RefCell {
+                                value: Some(
+                                    Node {
+                                        data: Char(
+                                            'B',
+                                        ),
+                                        left: RefCell {
+                                            value: None,
+                                        },
+                                        right: RefCell {
+                                            value: None,
+                                        },
+                                    },
+                                ),
+                            },
+                        },
+                    ),
+                },
+            },
+        ),
+    },
+]
+[src/ast.rs:67] &stack = [
+    'C',
+    '!',
+]
+[src/ast.rs:120] &self.stack = [
+    RefCell {
+        value: Some(
+            Node {
+                data: Or,
+                left: RefCell {
+                    value: Some(
+                        Node {
+                            data: Not,
+                            left: RefCell {
+                                value: None,
+                            },
+                            right: RefCell {
+                                value: Some(
+                                    Node {
+                                        data: And,
+                                        left: RefCell {
+                                            value: Some(
+                                                Node {
+                                                    data: Char(
+                                                        'A',
+                                                    ),
+                                                    left: RefCell {
+                                                        value: None,
+                                                    },
+                                                    right: RefCell {
+                                                        value: None,
+                                                    },
+                                                },
+                                            ),
+                                        },
+                                        right: RefCell {
+                                            value: Some(
+                                                Node {
+                                                    data: Char(
+                                                        'B',
+                                                    ),
+                                                    left: RefCell {
+                                                        value: None,
+                                                    },
+                                                    right: RefCell {
+                                                        value: None,
+                                                    },
+                                                },
+                                            ),
+                                        },
+                                    },
+                                ),
+                            },
+                        },
+                    ),
+                },
+                right: RefCell {
+                    value: Some(
+                        Node {
+                            data: Not,
+                            left: RefCell {
+                                value: None,
+                            },
+                            right: RefCell {
+                                value: Some(
+                                    Node {
+                                        data: Char(
+                                            'C',
+                                        ),
+                                        left: RefCell {
+                                            value: None,
+                                        },
+                                        right: RefCell {
+                                            value: None,
+                                        },
+                                    },
+                                ),
+                            },
+                        },
+                    ),
+                },
+            },
+        ),
+    },
+]
+[src/ast.rs:121] &stack = []
