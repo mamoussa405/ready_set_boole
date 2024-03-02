@@ -1,10 +1,10 @@
+
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
 /// The possible tokens in the AST
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Symbols {
-    False,
-    True,
+    Char(char),
     Not,
     And,
     Or,
@@ -13,11 +13,18 @@ enum Symbols {
     LogEq,
 }
 
+/// The possible var tokens, either 1, 0 or A..Z
+enum CharType {
+    Var,
+    ZeroOne,
+    None,
+}
+
 type RcNode = Rc<RefCell<Option<Box<Node>>>>;
 
 /// The AST node
-#[derive(Debug)]
-struct Node {
+#[derive(Debug, Clone)]
+pub struct Node {
     data: Symbols,
     left: RcNode,
     right: RcNode,
@@ -42,6 +49,7 @@ pub struct AST {
 }
 
 impl AST {
+    /// Get new AST instance
     pub fn new() -> Self {
         Self {
             root: Rc::new(RefCell::new(None)),
@@ -60,11 +68,26 @@ impl AST {
         let mut stack: Vec<char> = Vec::new();
         let mut is_oper: bool = false;
         let mut processed: usize = 0;
+        let mut var_type: CharType = CharType::None;
 
 
         for c in formula.as_bytes() {
             match c {
-                b'1' | b'0' => stack.push(*c as char),
+                b'1' | b'0' | b'A'..=b'Z' => { 
+                    match var_type {
+                        CharType::ZeroOne if *c >= b'A' && *c <= b'Z' => panic!("Invalid formula"),
+                        CharType::Var if *c == b'1' || *c == b'0' => panic!("Invalid formula"),
+                        CharType::None => {
+                            var_type = if *c == b'1' || *c == b'0' {
+                                CharType::ZeroOne
+                            } else {
+                                CharType::Var
+                            }
+                        },
+                        _ => {}
+                    };
+                    stack.push(*c as char);
+                },
                 b'|' => self.add_sub_tree(&mut stack, Symbols::Or),
                 b'&' => self.add_sub_tree(&mut stack, Symbols::And),
                 b'!' => {
@@ -102,17 +125,25 @@ impl AST {
                 should add a new node to the tree or just add the negation operator to the stack
                 to use it again in the next iteration.
                 for example:
-                1. if we have a formula like "10&!", we should add a new not node to the tree
+                1. if we have a formula like "AB&!", we should add a new not node to the tree
                 that will be a negation of the subtree with the parent node "&" and the children
-                "1" and "0".
-                2. if we have a formula like "1!!!!", when we find a negation operator, we just
+                "A" and "B".
+                2. if we have a formula like "A!!!!", when we find a negation operator, we just
                 check if should add it to stack if the top of the stack is not a negation operator.
              */
-            is_oper = if *c != b'1' && *c != b'0' && *c != b'!' {
-                true
+            if let CharType::Var = var_type {
+                is_oper = if (*c < b'A' || *c > b'Z') && *c != b'!' {
+                    true
+                } else {
+                    false
+                };
             } else {
-                false
-            };
+                is_oper = if *c != b'1' && *c != b'0' && *c != b'!' {
+                    true
+                } else {
+                    false
+                };
+            }
             processed += 1;
         }
 
@@ -135,11 +166,6 @@ impl AST {
         self.root = Rc::clone(&top);
     }
 
-    /// Get the top element from the stack
-    /// # Arguments
-    /// * `stack` - A mutable reference to a vector of characters
-    /// # Panics
-    /// If the formula is invalid
     fn get_top(&mut self, stack: &mut Vec<char>) -> RcNode {
         let mut top: char = stack.pop().unwrap_or_else(|| {
             panic!("Invalid formula");
@@ -148,41 +174,25 @@ impl AST {
 
         /*
             If the top of the stack is a negation operator, we should create a new node
-            with the negation operator and the right child will be the top of the stack,
-            either Symbols::True if the top is '1' or Symbols::False if the top is '0'.
+            with the negation operator and the right child will be the top of the stack.
 
-            Otherwise we should create a new node with the top of the stack, either
-            Symbols::True if the top is '1' or Symbols::False if the top is '0'.
+            Otherwise we should create a new node with the top of the stack.
          */
         if top == '!' {
             self.not_cnt -= 1;
-            new_node = 
-                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
+            new_node = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
             top = stack.pop().unwrap_or_else(|| {
                 panic!("Invalid formula");
             });
-            new_node.borrow_mut().as_mut().unwrap().right = if top == '1' {
-                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::True)))))
-            } else {
-                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::False)))))
-            };
+            new_node.borrow_mut().as_mut().unwrap().right =
+                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Char(top))))));
         } else {
-            new_node = if top == '1' {
-                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::True)))))
-            } else {
-                Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::False)))))
-            };
+            new_node = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Char(top))))));
         }
 
         new_node
     }
 
-    /// Add a new not node to the tree
-    /// # Arguments
-    /// * `stack` - A mutable reference to a vector of characters
-    /// * `pop` - A boolean that indicates if we should pop the top of the stack
-    /// # Panics
-    /// If the formula is invalid
     fn add_not_node(&mut self, stack: &mut Vec<char>, pop: bool) {
         let new_node: RcNode =
             Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
@@ -193,7 +203,7 @@ impl AST {
                 element of the stack with the characters, we get the top element from the stack
                 we add it as a right child to the not node and we push the subtree to the self.stack
                 Note: this case happens when we have a formula with just '!' operator and a single
-                character, either '1' or '0'.
+                character.
              */
             new_node.borrow_mut().as_mut().unwrap().right = self.get_top(stack);
             self.stack.push(new_node);
@@ -213,12 +223,6 @@ impl AST {
         }
     }
 
-    /// Add a new subtree to the tree
-    /// # Arguments
-    /// * `stack` - A mutable reference to a vector of characters
-    /// * `symbol` - A symbol that indicates the operator
-    /// # Panics
-    /// If the formula is invalid
     fn add_sub_tree(&mut self, stack: &mut Vec<char>, symbol: Symbols) {
         if (stack.len() - self.not_cnt) > 1 {
             /*
@@ -304,7 +308,6 @@ impl AST {
         self.eval_tree(self.root.borrow().as_ref())
     }
 
-    /// Evaluate the AST recursively
     fn eval_tree(&self, root: Option<&Box<Node>>) -> bool {
         match root.as_ref().unwrap().data {
             Symbols::And => {
@@ -330,8 +333,13 @@ impl AST {
             Symbols::Not => {
                 !self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
             },
-            Symbols::True => true,
-            Symbols::False => false,
+            Symbols::Char(c) => {
+                match c {
+                    '1' => return true,
+                    '0' => return false,
+                    _ => true,
+                }
+            }
         }
     }
 }

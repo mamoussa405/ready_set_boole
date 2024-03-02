@@ -1,6 +1,4 @@
-mod ast;
-
-use ast::AST;
+use super::AST;
 use std::collections::BTreeSet;
 
 
@@ -11,7 +9,6 @@ pub struct TruthTable {
     truth_table: Vec<Vec<char>>,
     unique_chars: BTreeSet<char>,
     formula: String,
-    is_valid_cnf: bool,
     start_index: isize,
     zeros_to_fill: usize,
     fill_zero: bool,
@@ -60,7 +57,6 @@ impl TruthTable {
             truth_table: vec![vec![' '; width]; height],
             unique_chars,
             formula: formula.to_string(),
-            is_valid_cnf: false,
             // The start column index from which we will start filling the truth table.
             start_index: (width - 7) as isize,
             /*
@@ -161,17 +157,11 @@ impl TruthTable {
             }
             // build the AST, evaluate it and store the result in the last column of the truth table.
             ast.build(&tmp_formula);
-            if i == 2 {
-                self.is_valid_cnf = ast.is_valid_cnf();
-            }
             self.truth_table[i][self.width - 3] = if ast.eval() { '1' } else { '0' };
         }
     }
 
     pub fn get_cnf_formula(&self) -> String {
-        if self.is_valid_cnf {
-            return self.formula.clone();
-        }
         let mut res: String = String::new();
 
         for i in 2..self.height {
@@ -200,7 +190,6 @@ impl TruthTable {
                 } else {
                     res += &format!("{}&", tmp_s);
                 }
-                // p!q!|r!|p!q!|r|&|p!q|r|&|pq!|r|&
             }
         }
 

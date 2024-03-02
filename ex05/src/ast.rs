@@ -14,6 +14,13 @@ enum Symbols {
     LogEq,
 }
 
+/// The possible var tokens, either 1, 0 or A..Z
+enum CharType {
+    Var,
+    ZeroOne,
+    None,
+}
+
 type RcNode = Rc<RefCell<Option<Box<Node>>>>;
 
 /// The AST node
@@ -43,6 +50,7 @@ pub struct AST {
 }
 
 impl AST {
+    /// Get new AST instance
     pub fn new() -> Self {
         Self {
             root: Rc::new(RefCell::new(None)),
@@ -51,6 +59,7 @@ impl AST {
             not_cnt: 0,
         }
     }
+
     /// Build the AST from a string
     /// # Arguments
     /// * `formula` - A string slice that holds the formula
@@ -60,11 +69,26 @@ impl AST {
         let mut stack: Vec<char> = Vec::new();
         let mut is_oper: bool = false;
         let mut processed: usize = 0;
+        let mut var_type: CharType = CharType::None;
 
 
         for c in formula.as_bytes() {
             match c {
-                b'A'..=b'Z' => stack.push(*c as char),
+                b'1' | b'0' | b'A'..=b'Z' => { 
+                    match var_type {
+                        CharType::ZeroOne if *c >= b'A' && *c <= b'Z' => panic!("Invalid formula"),
+                        CharType::Var if *c == b'1' || *c == b'0' => panic!("Invalid formula"),
+                        CharType::None => {
+                            var_type = if *c == b'1' || *c == b'0' {
+                                CharType::ZeroOne
+                            } else {
+                                CharType::Var
+                            }
+                        },
+                        _ => {}
+                    };
+                    stack.push(*c as char);
+                },
                 b'|' => self.add_sub_tree(&mut stack, Symbols::Or),
                 b'&' => self.add_sub_tree(&mut stack, Symbols::And),
                 b'!' => {
@@ -108,11 +132,19 @@ impl AST {
                 2. if we have a formula like "A!!!!", when we find a negation operator, we just
                 check if should add it to stack if the top of the stack is not a negation operator.
              */
-            is_oper = if (*c < b'A' || *c > b'Z') && *c != b'!' {
-                true
+            if let CharType::Var = var_type {
+                is_oper = if (*c < b'A' || *c > b'Z') && *c != b'!' {
+                    true
+                } else {
+                    false
+                };
             } else {
-                false
-            };
+                is_oper = if *c != b'1' && *c != b'0' && *c != b'!' {
+                    true
+                } else {
+                    false
+                };
+            }
             processed += 1;
         }
 
@@ -198,11 +230,6 @@ impl AST {
         nnf::get_rpn_formula(Rc::clone(&self.root))
     }
 
-    /// Get the top element from the stack
-    /// # Arguments
-    /// * `stack` - A mutable reference to a vector of characters
-    /// # Panics
-    /// If the formula is invalid
     fn get_top(&mut self, stack: &mut Vec<char>) -> RcNode {
         let mut top: char = stack.pop().unwrap_or_else(|| {
             panic!("Invalid formula");
@@ -230,12 +257,6 @@ impl AST {
         new_node
     }
 
-    /// Add a new not node to the tree
-    /// # Arguments
-    /// * `stack` - A mutable reference to a vector of characters
-    /// * `pop` - A boolean that indicates if we should pop the top of the stack
-    /// # Panics
-    /// If the formula is invalid
     fn add_not_node(&mut self, stack: &mut Vec<char>, pop: bool) {
         let new_node: RcNode =
             Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
@@ -266,12 +287,6 @@ impl AST {
         }
     }
 
-    /// Add a new subtree to the tree
-    /// # Arguments
-    /// * `stack` - A mutable reference to a vector of characters
-    /// * `symbol` - A symbol that indicates the operator
-    /// # Panics
-    /// If the formula is invalid
     fn add_sub_tree(&mut self, stack: &mut Vec<char>, symbol: Symbols) {
         if (stack.len() - self.not_cnt) > 1 {
             /*
@@ -349,6 +364,88 @@ impl AST {
             self.stack.push(new_node);
         } else {
             panic!("Invalid formula");
+        }
+    }
+
+    /// Evaluate the AST calling the recursive function eval_tree
+    pub fn eval(&self) -> bool {
+        self.eval_tree(self.root.borrow().as_ref())
+    }
+
+    fn eval_tree(&self, root: Option<&Box<Node>>) -> bool {
+        match root.as_ref().unwrap().data {
+            Symbols::And => {
+                self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
+                    & self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
+            }
+            Symbols::Or => {
+                self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
+                    | self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
+            }
+            Symbols::Xor => {
+                self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
+                    ^ self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
+            }
+            Symbols::MatCond => {
+                !(self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
+                    && !self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref()))
+            }
+            Symbols::LogEq => {
+                self.eval_tree(root.as_ref().unwrap().left.borrow().as_ref())
+                    == self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
+            }
+            Symbols::Not => {
+                !self.eval_tree(root.as_ref().unwrap().right.borrow().as_ref())
+            },
+            Symbols::Char(c) => {
+                match c {
+                    '1' => return true,
+                    '0' => return false,
+                    _ => true,
+                }
+            }
+        }
+    }
+
+    pub fn is_valid_cnf(&self) -> bool {
+        self.is_valid_cnf_formula(Rc::clone(&self.root))
+    }
+
+    fn is_valid_cnf_formula(&self, curr_node: RcNode) -> bool {
+        match curr_node.borrow().as_ref() {
+            Some(ref node) => {
+                match node.data {
+                    Symbols::Not | Symbols::Or => {
+                        match node.right.borrow().as_ref() {
+                            Some(ref right) => match right.data {
+                                Symbols::Char(_) | Symbols::Not => {},
+                                Symbols::And => return false,
+                                Symbols::Or => match node.data {
+                                    Symbols::Not => return false,
+                                    _ => {},
+                                },
+                                _ => {}
+                            },
+                            None => return true,
+                        };
+                        match node.left.borrow().as_ref() {
+                            Some(ref left) => match left.data {
+                                Symbols::Char(_) | Symbols::Not => {},
+                                Symbols::And => return false,
+                                Symbols::Or => match node.data {
+                                    Symbols::Not => return false,
+                                    _ => {},
+                                },
+                                _ => {}
+                            },
+                            None => return true,
+                        } 
+                    },
+                    _ => {}
+                }
+                return self.is_valid_cnf_formula(Rc::clone(&node.right)) && self.is_valid_cnf_formula(Rc::clone(&node.left));
+            },
+            None => return true,
         }
     }
 }
