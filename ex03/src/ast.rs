@@ -1,4 +1,3 @@
-
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
 /// The possible tokens in the AST
@@ -11,13 +10,6 @@ enum Symbols {
     Xor,
     MatCond,
     LogEq,
-}
-
-/// The possible var tokens, either 1, 0 or A..Z
-enum CharType {
-    Var,
-    ZeroOne,
-    None,
 }
 
 type RcNode = Rc<RefCell<Option<Box<Node>>>>;
@@ -62,32 +54,18 @@ impl AST {
     /// Build the AST from a string
     /// # Arguments
     /// * `formula` - A string slice that holds the formula
+    /// * `allow_var` - A boolean to check if we want to use vars or '1' and '0'
     /// # Panics
     /// If the formula is invalid
-    pub fn build(&mut self, formula: &str) {
+    pub fn build(&mut self, formula: &str, allow_var: bool) {
         let mut stack: Vec<char> = Vec::new();
         let mut is_oper: bool = false;
         let mut processed: usize = 0;
-        let mut var_type: CharType = CharType::None;
-
 
         for c in formula.as_bytes() {
             match c {
-                b'1' | b'0' | b'A'..=b'Z' => { 
-                    match var_type {
-                        CharType::ZeroOne if *c >= b'A' && *c <= b'Z' => panic!("Invalid formula"),
-                        CharType::Var if *c == b'1' || *c == b'0' => panic!("Invalid formula"),
-                        CharType::None => {
-                            var_type = if *c == b'1' || *c == b'0' {
-                                CharType::ZeroOne
-                            } else {
-                                CharType::Var
-                            }
-                        },
-                        _ => {}
-                    };
-                    stack.push(*c as char);
-                },
+                b'1' | b'0' if !allow_var => stack.push(*c as char),
+                b'A'..=b'Z' if allow_var => stack.push(*c as char),
                 b'|' => self.add_sub_tree(&mut stack, Symbols::Or),
                 b'&' => self.add_sub_tree(&mut stack, Symbols::And),
                 b'!' => {
@@ -111,6 +89,8 @@ impl AST {
                             stack.push(top);
                             stack.push(*c as char);
                             self.not_cnt += 1;
+                        } else {
+                            self.not_cnt -= 1;
                         }
                     }
                 }
@@ -131,7 +111,7 @@ impl AST {
                 2. if we have a formula like "A!!!!", when we find a negation operator, we just
                 check if should add it to stack if the top of the stack is not a negation operator.
              */
-            if let CharType::Var = var_type {
+            if allow_var {
                 is_oper = if (*c < b'A' || *c > b'Z') && *c != b'!' {
                     true
                 } else {

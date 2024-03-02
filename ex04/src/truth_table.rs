@@ -120,7 +120,7 @@ impl TruthTable {
                 } 
             }
             // build the AST, evaluate it and store the result in the last column of the truth table.
-            ast.build(&tmp_formula);
+            ast.build(&tmp_formula, false);
             self.truth_table[i][self.width - 3] = if ast.eval() { '1' } else { '0' };
         }
 

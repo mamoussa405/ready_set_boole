@@ -10,7 +10,7 @@ pub fn conjunctive_normal_form(formula: &str) -> String {
     }
     let mut tree: AST = AST::new();
 
-    tree.build(formula);
+    tree.build(formula, true);
     tree.simplify_material_properties();
     let nnf: String = tree.get_rpn_formula();
     if tree.is_valid_cnf() {

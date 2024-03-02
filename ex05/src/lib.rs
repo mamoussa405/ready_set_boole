@@ -8,11 +8,9 @@ pub fn negation_normal_form(formula: &str) -> String {
     }
     let mut tree: AST = AST::new();
 
-    tree.build(formula);
+    tree.build(formula, true);
     tree.simplify_material_properties();
     tree.get_rpn_formula()
-    // dbg!(tree);
-    // "".to_string()
 }
 
 #[cfg(test)]
