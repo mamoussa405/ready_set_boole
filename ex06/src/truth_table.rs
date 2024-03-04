@@ -2,6 +2,11 @@ use super::AST;
 use std::collections::BTreeSet;
 
 
+// struct Cord {
+//     x: usize,
+//     y: usize,
+// }
+
 /// TruthTable struct
 pub struct TruthTable {
     width: usize,
@@ -15,6 +20,9 @@ pub struct TruthTable {
 }
 
 impl TruthTable {
+    /// Get a new TruthTable instance
+    /// # Arguments
+    /// *`forumla` -- The logical function to build the truth table for
     pub fn new(formula: &str) -> Self {
         if formula.is_empty() {
             panic!("Invalid formula");
@@ -161,9 +169,91 @@ impl TruthTable {
         }
     }
 
+    // fn get_number_from_gray_code(g_code: usize) -> usize {
+    //     let mut res: usize = 0;
+
+    //     for bit in (0..=63).rev() {
+    //         if bit == 63 {
+    //             if g_code & (1 << bit) != 0 {
+    //                 res |= 1 << bit;
+    //             }
+    //         } else {
+    //             let curr_bit: bool = g_code & (1 << bit) != 0;
+    //             let last_bit: bool = res & (1 << (bit + 1)) != 0;
+
+    //             if curr_bit ^ last_bit {
+    //                 res |= 1 << bit;
+    //             }
+    //         }
+    //     }
+
+    //     res
+    // }
+
+    // fn k_map(&self) -> String {
+    //     let h: usize = if self.unique_chars.len() % 2 == 0 {
+    //         self.unique_chars.len()
+    //     } else {
+    //         self.unique_chars.len() - 1
+    //     };
+    //     let w: usize = (1 << self.unique_chars.len()) / h;
+    //     let mut mat: Vec<Vec<i8>> = vec![vec![0; w]; h];
+    //     let mut spiral_index: HashMap<usize, Cord> = HashMap::new();
+    //     let mut curr_pos: usize = 0;
+
+    //     for y in 0..h {
+    //         if y % 2 == 0 {
+    //             for x in 0..w {
+    //                 spiral_index.insert(curr_pos, Cord{ x, y });
+    //                 curr_pos += 1;
+    //             }
+    //         } else {
+    //             for x in (0..w).rev() {
+    //                 spiral_index.insert(curr_pos, Cord{ x, y });
+    //                 curr_pos += 1;
+    //             }
+    //         }
+    //     }
+
+    //     for i in 2..self.height {
+    //         if self.truth_table[i][self.width - 3] == '1' {
+    //             let spiral_pos: usize = Self::get_number_from_gray_code(i - 2);
+    //             let Cord { x, y } = spiral_index.get(&spiral_pos).unwrap_or_else(|| {
+    //                 panic!("Failed to get value from HashMap");
+    //             });
+
+    //             mat[*y][*x] = 1;
+    //         }
+    //     }
+
+    //     for i in 0..h {
+    //         print!("[");
+    //         for j in 0..w {
+    //             print!("{}", mat[i][j]);
+    //             if j < w - 1 {
+    //                 print!(",");
+    //             }
+    //         }
+    //         println!("]");
+    //     }
+
+    //     "".to_string()
+
+    // }
+
+    /// Get conjunction normal form of the formula
     pub fn get_cnf_formula(&self) -> String {
         let mut res: String = String::new();
 
+        /*
+            Get the conjunctive normal form from the truth table,
+            the algorithm is as follows:
+            1- iterate over the result column in the truth table
+            2- if the the result is false, then we should take the
+            disjunctions of the variables depending on their values
+            in the row, if the value is false then take the var, otherwise
+            take its negation.
+         */
         for i in 2..self.height {
             if self.truth_table[i][self.width - 3] == '0' {
                 let mut j = 2;

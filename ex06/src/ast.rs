@@ -14,13 +14,6 @@ enum Symbols {
     LogEq,
 }
 
-/// The possible var tokens, either 1, 0 or A..Z
-enum CharType {
-    Var,
-    ZeroOne,
-    None,
-}
-
 type RcNode = Rc<RefCell<Option<Box<Node>>>>;
 
 /// The AST node
@@ -70,7 +63,6 @@ impl AST {
         let mut stack: Vec<char> = Vec::new();
         let mut is_oper: bool = false;
         let mut processed: usize = 0;
-        let mut var_type: CharType = CharType::None;
 
         for c in formula.as_bytes() {
             match c {
@@ -396,11 +388,20 @@ impl AST {
         }
     }
 
+    /// Check if the formula is a valid cnf
     pub fn is_valid_cnf(&self) -> bool {
         self.is_valid_cnf_formula(Rc::clone(&self.root))
     }
 
     fn is_valid_cnf_formula(&self, curr_node: RcNode) -> bool {
+        /*
+            Check if the formula is a valid cnf, the algorithm is as follows:
+            1- iterate recursively over the AST
+            2- if the current node is a Not node then the right node should be
+            a leaf node or a Not node, otherwise return false.
+            3- if the current node is an Or node then the right and the left nodes
+            should be any value except the And value.
+         */
         match curr_node.borrow().as_ref() {
             Some(ref node) => {
                 match node.data {
