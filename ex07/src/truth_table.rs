@@ -14,6 +14,7 @@ pub struct TruthTable {
     zeros_to_fill: usize,
     fill_zero: bool,
 }
+
 impl TruthTable {
     /// Get a new TruthTable instance
     /// # Arguments
@@ -167,14 +168,16 @@ impl TruthTable {
         &self.truth_table
     }
 
-    /// Print the truth table.
-    pub fn print(&self) {
-        for i in 0..self.height {
-            for j in 0..self.width {
-                print!("{}", self.truth_table[i][j]);
+    /// Check if the formula is satisfiable
+    pub fn is_sat(&self) -> bool {
+
+        for i in 2..self.height {
+            if self.truth_table[i][self.width - 3] == '1' {
+                return true;
             }
-            println!();
         }
+
+        false
     }
 
 }
