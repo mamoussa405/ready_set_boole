@@ -35,7 +35,7 @@ mod tests {
     }
 
     #[test]
-    fn extended_not_satisfiable_tests() {
+    fn not_satisfiable_tests() {
         assert!(!sat("PQ|P!Q!&&"));
         assert!(!sat("BB!="));
         assert!(!sat("CC!&CC!|="));
