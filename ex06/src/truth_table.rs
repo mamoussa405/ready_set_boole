@@ -287,7 +287,7 @@ impl TruthTable {
     }
 
     /// Print the truth table.
-    pub fn print(&self) {
+    pub fn _print(&self) {
         for i in 0..self.height {
             for j in 0..self.width {
                 print!("{}", self.truth_table[i][j]);

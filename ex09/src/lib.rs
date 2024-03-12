@@ -2,6 +2,13 @@ mod ast;
 
 use ast::AST;
 
+/// Evaluate sets depending on the formula
+/// # Example
+/// ```
+/// use ex09::eval_set;
+/// 
+/// eval_set("AB&", vec![vec![0, 1, 2], vec![0, 3, 4]]);
+/// ```
 pub fn eval_set(formula: &str, sets: Vec<Vec<i32>>) -> Vec<i32> {
     if formula.is_empty() {
         panic!("Invalid formula");
@@ -375,5 +382,113 @@ mod tests {
         );
         res.sort();
         assert_eq!(vec![-55, -1, 0, 1, 2], res);
+    }
+
+    #[test]
+    #[should_panic(expected = "The number of sets should be equal to the number of vars in the formula")]
+    fn number_of_vars_greater_than_number_of_sets() {
+        eval_set("AB&C|", vec![
+            vec![1, 2, 3],
+            vec![1, 2, 3]
+        ]);
+    }
+
+    #[test]
+    #[should_panic(expected = "The number of sets should be equal to the number of vars in the formula")]
+    fn number_of_vars_lesser_than_number_of_sets() {
+        eval_set("AB&", vec![
+            vec![1, 2, 3],
+            vec![1, 2, 3],
+            vec![1, 2, 3],
+            vec![1, 2, 3],
+            vec![1, 2, 3],
+        ]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Set with index 1 has duplicate elements")]
+    fn set_with_duplicate_element() {
+        eval_set("AB&", vec![
+            vec![1, 2, 3],
+            vec![1, 2, 3, 3],
+        ]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_empty_string_test() {
+        eval_set("", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_just_spaces_test() {
+        eval_set("      ", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test1() {
+        eval_set("AAA!", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test2() {
+        eval_set("A", vec![] as Vec<Vec<i32>> );
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test3() {
+        eval_set("AB", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test4() {
+        eval_set("AAC|", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_operators_test5() {
+        eval_set("ABCD&=>AB=|CE=F!G=>^^", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_values_test1() {
+        eval_set("!", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_no_enough_values_test2() {
+        eval_set("!!!!!", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_unknown_symbol_test1() {
+        eval_set("aY=!)>K^", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_unknown_symbol_test2() {
+        eval_set("&&!!Abcd", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_unknown_symbol_test3() {
+        eval_set("1111&=>11=|11=1!0=>^", vec![] as Vec<Vec<i32>>);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid formula")]
+    fn invalid_formula_unknown_symbol_test4() {
+        eval_set("111|", vec![] as Vec<Vec<i32>>);
     }
 }

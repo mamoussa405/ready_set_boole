@@ -356,6 +356,8 @@ impl AST {
     pub fn eval(&self, sets: Vec<Vec<i32>>) -> Vec<i32> {
         let mut unique_chars: BTreeSet<char> = BTreeSet::new();
 
+
+        /* Store unique characters in a BTreeSet */
         for c in self.formula.chars() {
             if c >= 'A' && c <= 'Z' {
                 unique_chars.insert(c);
@@ -368,6 +370,13 @@ impl AST {
         let mut var_set: HashMap<char, HashSet<i32>> = HashMap::new();
         let mut universal_set: HashSet<i32> = HashSet::new();
 
+        /*
+            Iterate over the HashSet with unique characters and map
+            each character with a HashSet in order e.i, 'A' with the first set
+            'B' with the second one and so on...
+            And while iterating we construct a universal set which is the union
+            of all sets.
+         */
         for it in unique_chars.iter() {
             let mut tmp_set: HashSet<i32> = HashSet::new();
 
