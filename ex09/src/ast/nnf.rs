@@ -1,5 +1,25 @@
 use super::*;
 
+fn clone_subtree(curr_node: RcNode) -> RcNode {
+
+    match curr_node.borrow().as_ref() {
+        Some(ref node) => {
+           if node.right.borrow().is_none() && node.left.borrow().is_none() {
+            return Rc::new(RefCell::new(Some(Box::new(node.as_ref().clone()))));
+           } 
+           let curr_clone: RcNode = Rc::new(RefCell::new(Some(Box::new(node.as_ref().clone()))));
+
+            curr_clone.borrow_mut().as_mut().unwrap().left = clone_subtree(Rc::clone(&node.left));
+            curr_clone.borrow_mut().as_mut().unwrap().right = clone_subtree(Rc::clone(&node.right));
+
+            return curr_clone;
+        },
+        None => {
+            Rc::new(RefCell::new(None))
+        }
+    }
+}
+
 fn get_equivalence_left_subtree(root: &mut Box<Node>) -> RcNode {
     /*
        This function will return the left subtree of the equivalence operator
@@ -21,9 +41,7 @@ fn get_equivalence_left_subtree(root: &mut Box<Node>) -> RcNode {
     let mat_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::MatCond)))));
 
     mat_node.borrow_mut().as_mut().unwrap().left = Rc::clone(&root.left);
-    mat_node.borrow_mut().as_mut().unwrap().right = Rc::new(RefCell::new(Some(
-        root.right.borrow().as_ref().unwrap().clone(),
-    )));
+    mat_node.borrow_mut().as_mut().unwrap().right = clone_subtree(Rc::clone(&root.right));
 
     mat_node
 }
@@ -49,9 +67,7 @@ fn get_equivalence_right_subtree(root: &mut Box<Node>) -> RcNode {
     let mat_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::MatCond)))));
 
     mat_node.borrow_mut().as_mut().unwrap().left = Rc::clone(&root.right);
-    mat_node.borrow_mut().as_mut().unwrap().right = Rc::new(RefCell::new(Some(
-        root.left.borrow().as_ref().unwrap().clone(),
-    )));
+    mat_node.borrow_mut().as_mut().unwrap().right = clone_subtree(Rc::clone(&root.left));
 
     mat_node
 }
@@ -155,9 +171,7 @@ fn get_xor_left_subtree(curr_node: &mut Box<Node>) -> RcNode {
     let and_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::And)))));
     let not_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
 
-    not_node.borrow_mut().as_mut().unwrap().right = Rc::new(RefCell::new(Some(
-        curr_node.right.borrow().as_ref().unwrap().clone(),
-    )));
+    not_node.borrow_mut().as_mut().unwrap().right = clone_subtree(Rc::clone(&curr_node.right));
     and_node.borrow_mut().as_mut().unwrap().left = Rc::clone(&curr_node.left);
     and_node.borrow_mut().as_mut().unwrap().right = Rc::clone(&not_node);
 
@@ -186,9 +200,7 @@ fn get_xor_right_subtree(curr_node: &mut Box<Node>) -> RcNode {
     let and_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::And)))));
     let not_node: RcNode = Rc::new(RefCell::new(Some(Box::new(Node::new(Symbols::Not)))));
 
-    not_node.borrow_mut().as_mut().unwrap().right = Rc::new(RefCell::new(Some(
-        curr_node.left.borrow().as_ref().unwrap().clone(),
-    )));
+    not_node.borrow_mut().as_mut().unwrap().right = clone_subtree(Rc::clone(&curr_node.left));
     and_node.borrow_mut().as_mut().unwrap().left = Rc::clone(&curr_node.right);
     and_node.borrow_mut().as_mut().unwrap().right = Rc::clone(&not_node);
 

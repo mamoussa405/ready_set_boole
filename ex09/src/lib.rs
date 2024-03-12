@@ -243,7 +243,7 @@ mod tests {
     }
 
     #[test]
-    fn sets_implication_tests() {
+    fn sets_equivalence_tests() {
         let mut res: Vec<i32> = eval_set(
             "AB=",
             vec![
@@ -253,5 +253,127 @@ mod tests {
         );
         res.sort();
         assert_eq!(vec![-10, 0, 2, 5], res);
+
+        res = eval_set(
+            "AB=!",
+            vec![
+                vec![-10, 3, 20, 2, 0, 5],
+                vec![2, 0, -10, 13, 60, 5],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![3, 13, 20, 60], res);
+
+        res = eval_set(
+            "AA!=",
+            vec![
+                vec![-10, 3, 20, 2, 0, 5],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![] as Vec<i32>, res);
+    }
+
+    #[test]
+    fn sets_implication_tests() {
+        let mut res: Vec<i32> = eval_set(
+            "AB>",
+            vec![
+                vec![-10, 3, 20, 2, 0, 5],
+                vec![2, 0, -10, 13, 60, 5],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![-10, 0, 2, 5, 13, 60], res);
+
+        res = eval_set(
+            "AB>!",
+            vec![
+                vec![-10, 3, 20, 2, 0, 5],
+                vec![2, 0, -10, 13, 60, 5],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![3, 20], res);
+
+        res = eval_set(
+            "AA!>",
+            vec![
+                vec![-10, 3, 20, 2, 0, 5],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![] as Vec<i32>, res);
+    }
+
+    #[test]
+    fn sets_xor_tests() {
+        let mut res: Vec<i32> = eval_set(
+            "AB^",
+            vec![
+                vec![-10, 3, 20, 2, 0, 5],
+                vec![2, 0, -10, 13, 60, 5],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![3, 13, 20, 60], res);
+
+        res = eval_set(
+            "AB^!",
+            vec![
+                vec![-10, 3, 20, 2, 0, 5],
+                vec![2, 0, -10, 13, 60, 5],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![-10, 0, 2, 5], res);
+
+        res = eval_set(
+            "AA!^",
+            vec![
+                vec![-10, 3, 20, 2, 0, 5],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![-10, 0, 2, 3, 5, 20], res);
+    }
+
+    #[test]
+    fn sets_mixed_tests() {
+        let mut res: Vec<i32> = eval_set(
+            "AB&C|D^",
+            vec![
+                vec![-10, 3, 20, 2, 0, 5],
+                vec![2, 0, -10, 13, 60, 5],
+                vec![1, 3],
+                vec![],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![-10, 0, 1, 2, 3, 5], res);
+
+        res = eval_set(
+            "K!L|F&",
+            vec![
+                vec![1,-1],
+                vec![0, 2],
+                vec![100, -100],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![-1, 1], res);
+
+        res = eval_set(
+            "XY=U>RT&|",
+            vec![
+                vec![42, 1337],
+                vec![80],
+                vec![-55, 0, 1],
+                vec![1, 2, -1],
+                vec![],
+            ],
+        );
+        res.sort();
+        assert_eq!(vec![-55, -1, 0, 1, 2], res);
     }
 }
