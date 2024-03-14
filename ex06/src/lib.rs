@@ -37,7 +37,6 @@ pub fn conjunctive_normal_form(formula: &str) -> String {
     if tree.is_valid_cnf() {
         return move_conjunctions_to_end(&nnf);
     }
-    println!("{nnf}");
     let mut truth_table: TruthTable = TruthTable::new(&nnf);
 
     truth_table.fill();
@@ -69,8 +68,8 @@ mod tests {
         assert_eq!("A!", conjunctive_normal_form("A!"));
         assert_eq!("AB|C|AB|C!|A!B|C|A!B!|C|&&&", conjunctive_normal_form("AB|!AC!&^!"));
         assert_eq!("AB|D|AB!|D!|A!B|D!|A!B!|D!|&&&", conjunctive_normal_form("AB=B>D^"));
-        assert_eq!("AB|AB!|&", conjunctive_normal_form("AB=B="));
-        // assert_eq!("AB|D|AB!|D|&", conjunctive_normal_form("AB=B=D|"));
+        assert_eq!("AB|", conjunctive_normal_form("AB=B="));
+        assert_eq!("AB|D|", conjunctive_normal_form("AB=B=D|"));
         assert_eq!("AB|D|AB!|D|A!B!|D|&&", conjunctive_normal_form("AB>D>"));
     }
     
